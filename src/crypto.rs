@@ -36,8 +36,6 @@ pub fn decrypt(data: &str, password: &str) -> String {
     let cipher = Aes256Gcm::new(&get_aes_key(password));
     let (nonce_bytes, encrypted) = bytes.split_at(12);
     let nonce = Nonce::from_slice(nonce_bytes);
-    let plaintext = cipher
-        .decrypt(nonce, encrypted)
-        .expect("decryption failed");
+    let plaintext = cipher.decrypt(nonce, encrypted).expect("decryption failed");
     String::from_utf8(plaintext).expect("invalid UTF-8")
 }

@@ -7,6 +7,8 @@ use crate::db;
 use crate::models::{note_avatar_color, AppTheme, NoteTab};
 use crate::settings;
 
+pub const VERSION: &str = "0.1.0";
+
 pub struct NoteApp {
     pub db: Connection,
     pub notes: Vec<crate::models::Note>,
@@ -24,6 +26,9 @@ pub struct NoteApp {
     pub drag_idx: Option<usize>,
     pub context_note_id: Option<i64>,
     pub context_menu_pos: egui::Pos2,
+    pub show_about: bool,
+    pub menu_just_opened: bool,
+    pub about_just_opened: bool,
 }
 
 impl NoteApp {
@@ -49,6 +54,9 @@ impl NoteApp {
             drag_idx: None,
             context_note_id: None,
             context_menu_pos: egui::Pos2::ZERO,
+            show_about: false,
+            menu_just_opened: false,
+            about_just_opened: false,
         };
         app.refresh_list();
 
@@ -145,12 +153,20 @@ impl NoteApp {
     }
 
     fn save_open_tabs(&self) {
-        let ids: Vec<i64> = self.open_tabs.iter().map(|t| t.note_id).collect();
+        let ids: Vec<i64> = self
+            .open_tabs
+            .iter()
+            .map(|t| t.note_id)
+            .filter(|&id| id != -1)
+            .collect();
         settings::save_open_tab_ids(&ids);
     }
 
     pub fn save_tab_content(&mut self, tab_idx: usize, new_content: &str) {
         let note_id = self.open_tabs[tab_idx].note_id;
+        if note_id == -1 {
+            return;
+        }
         let is_locked = self.open_tabs[tab_idx].is_locked;
         let final_content = if is_locked {
             crypto::encrypt(new_content, &self.master_password)
@@ -162,6 +178,7 @@ impl NoteApp {
         self.open_tabs[tab_idx].content = new_content.to_string();
     }
 
+    #[allow(dead_code)]
     pub fn delete_note(&mut self) {
         if let Some(tab_idx) = self.selected_tab {
             let note_id = self.open_tabs[tab_idx].note_id;
@@ -181,9 +198,22 @@ impl NoteApp {
 
 impl eframe::App for NoteApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.menu_just_opened = false;
+        self.about_just_opened = false;
+
+        let effective_dark = match self.theme {
+            AppTheme::Dark => true,
+            AppTheme::Light => false,
+            AppTheme::System => matches!(ctx.system_theme(), Some(egui::Theme::Dark)),
+        };
+
         match self.theme {
             AppTheme::Light => ctx.set_visuals(egui::Visuals::light()),
             AppTheme::Dark => ctx.set_visuals(egui::Visuals::dark()),
+            AppTheme::System => match ctx.system_theme() {
+                Some(egui::Theme::Light) | None => ctx.set_visuals(egui::Visuals::light()),
+                Some(egui::Theme::Dark) => ctx.set_visuals(egui::Visuals::dark()),
+            },
         }
 
         let prev_query = self.search_query.clone();
@@ -191,7 +221,7 @@ impl eframe::App for NoteApp {
         let mut action_new = false;
 
         // --- TAB BAR (en üst) ---
-        let (bar_bg, active_bg, inactive_bg, active_text, inactive_text) = if self.theme == AppTheme::Dark {
+        let (bar_bg, active_bg, inactive_bg, active_text, inactive_text) = if effective_dark {
             (
                 egui::Color32::from_rgb(22, 22, 26),
                 egui::Color32::from_rgb(30, 30, 36),
@@ -221,7 +251,10 @@ impl eframe::App for NoteApp {
 
                 // --- Window drag handle + double-click maximize ---
                 let drag_sense = ui.interact(
-                    egui::Rect::from_min_max(ui.max_rect().min, egui::pos2(ui.max_rect().max.x - 36.0, ui.max_rect().max.y)),
+                    egui::Rect::from_min_max(
+                        ui.max_rect().min,
+                        egui::pos2(ui.max_rect().max.x - 36.0, ui.max_rect().max.y),
+                    ),
                     ui.id().with("bar_drag"),
                     egui::Sense::click_and_drag(),
                 );
@@ -234,48 +267,6 @@ impl eframe::App for NoteApp {
                 }
 
                 ui.horizontal(|ui| {
-                    // --- Menu button ---
-                    let menu_btn_size = egui::vec2(34.0, 30.0);
-                    let (menu_btn_rect, menu_btn_resp) =
-                        ui.allocate_exact_size(menu_btn_size, egui::Sense::click());
-                    menu_btn_pos = menu_btn_rect.left_bottom();
-
-                    let menu_hover_bg = if self.theme == AppTheme::Dark {
-                        egui::Color32::from_rgb(50, 50, 60)
-                    } else {
-                        egui::Color32::from_rgb(210, 210, 220)
-                    };
-                    let m_painter = ui.painter_at(menu_btn_rect);
-                    if menu_btn_resp.hovered() || self.show_menu {
-                        m_painter.rect_filled(menu_btn_rect, 4.0, menu_hover_bg);
-                    }
-                    let menu_btn_text_color = if self.theme == AppTheme::Dark {
-                        egui::Color32::WHITE
-                    } else {
-                        egui::Color32::BLACK
-                    };
-                    // Hamburger icon (3 lines)
-                    let mc = menu_btn_rect.center();
-                    let mw = 14.0;
-                    let mg = 4.0;
-                    let line_stroke = egui::Stroke::new(2.0, menu_btn_text_color);
-                    m_painter.line_segment(
-                        [egui::pos2(mc.x - mw / 2.0, mc.y - mg), egui::pos2(mc.x + mw / 2.0, mc.y - mg)],
-                        line_stroke,
-                    );
-                    m_painter.line_segment(
-                        [egui::pos2(mc.x - mw / 2.0, mc.y), egui::pos2(mc.x + mw / 2.0, mc.y)],
-                        line_stroke,
-                    );
-                    m_painter.line_segment(
-                        [egui::pos2(mc.x - mw / 2.0, mc.y + mg), egui::pos2(mc.x + mw / 2.0, mc.y + mg)],
-                        line_stroke,
-                    );
-                    if menu_btn_resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
-                        self.show_menu = !self.show_menu;
-                        self.context_note_id = None;
-                    }
-
                     // --- Render tabs ---
                     for i in 0..self.open_tabs.len() {
                         let text = self.open_tabs[i].title.clone();
@@ -293,15 +284,30 @@ impl eframe::App for NoteApp {
                         let tab_size = egui::vec2(tab_w, 30.0);
                         let (tab_rect, tab_resp) =
                             ui.allocate_exact_size(tab_size, egui::Sense::click_and_drag());
+
+                        let display_text = if text.len() > 15 {
+                            format!("{}…", &text[..15])
+                        } else {
+                            text.clone()
+                        };
                         tab_rects.push(tab_rect);
 
                         let corner = if is_selected {
-                            egui::CornerRadius { nw: 6, ne: 6, sw: 0, se: 0 }
+                            egui::CornerRadius {
+                                nw: 6,
+                                ne: 6,
+                                sw: 0,
+                                se: 0,
+                            }
                         } else {
                             egui::CornerRadius::same(6)
                         };
                         let tab_bg = if is_selected { active_bg } else { inactive_bg };
-                        let text_color = if is_selected { active_text } else { inactive_text };
+                        let text_color = if is_selected {
+                            active_text
+                        } else {
+                            inactive_text
+                        };
 
                         let painter = ui.painter_at(tab_rect);
                         painter.rect_filled(tab_rect, corner, tab_bg);
@@ -311,7 +317,7 @@ impl eframe::App for NoteApp {
                             egui::pos2(tab_rect.max.x - 30.0, tab_rect.center().y - 14.0),
                             egui::vec2(28.0, 28.0),
                         );
-                        let close_hover_bg = if self.theme == AppTheme::Dark {
+                        let close_hover_bg = if effective_dark {
                             egui::Color32::from_rgb(80, 40, 40)
                         } else {
                             egui::Color32::from_rgb(230, 180, 180)
@@ -350,13 +356,13 @@ impl eframe::App for NoteApp {
                             painter.text(
                                 egui::pos2(tab_rect.min.x + 10.0, tab_rect.center().y),
                                 egui::Align2::LEFT_CENTER,
-                                &text,
+                                &display_text,
                                 egui::FontId::proportional(13.0),
                                 text_color,
                             );
                         }
 
-                        // Close X
+                        // Close tab X
                         let pointer_pos = ctx.pointer_interact_pos();
                         let is_close_hover = pointer_pos.map_or(false, |p| close_rect.contains(p));
                         if is_close_hover {
@@ -366,11 +372,17 @@ impl eframe::App for NoteApp {
                         let xs = 5.0;
                         let x_stroke = egui::Stroke::new(2.0, text_color);
                         painter.line_segment(
-                            [egui::pos2(xc.x - xs, xc.y - xs), egui::pos2(xc.x + xs, xc.y + xs)],
+                            [
+                                egui::pos2(xc.x - xs, xc.y - xs),
+                                egui::pos2(xc.x + xs, xc.y + xs),
+                            ],
                             x_stroke,
                         );
                         painter.line_segment(
-                            [egui::pos2(xc.x + xs, xc.y - xs), egui::pos2(xc.x - xs, xc.y + xs)],
+                            [
+                                egui::pos2(xc.x + xs, xc.y - xs),
+                                egui::pos2(xc.x - xs, xc.y + xs),
+                            ],
                             x_stroke,
                         );
 
@@ -380,11 +392,10 @@ impl eframe::App for NoteApp {
                         }
 
                         if tab_resp.clicked() {
-                            let is_close =
-                                pointer_pos.map_or(false, |p| close_rect.contains(p));
+                            let is_close = pointer_pos.map_or(false, |p| close_rect.contains(p));
                             if is_close {
                                 to_close = Some(i);
-                            } else if is_selected {
+                            } else if is_selected && self.open_tabs[i].note_id != -1 {
                                 self.tab_rename_buf = text;
                                 self.tab_renaming = true;
                             } else {
@@ -401,14 +412,14 @@ impl eframe::App for NoteApp {
                     let (plus_rect, plus_resp) =
                         ui.allocate_exact_size(btn_size, egui::Sense::click());
                     let plus_hover = plus_resp.hovered();
-                    let btn_text_color = if self.theme == AppTheme::Dark {
+                    let btn_text_color = if effective_dark {
                         egui::Color32::WHITE
                     } else {
                         egui::Color32::BLACK
                     };
                     let painter = ui.painter_at(plus_rect);
                     if plus_hover {
-                        let plus_hover_bg = if self.theme == AppTheme::Dark {
+                        let plus_hover_bg = if effective_dark {
                             egui::Color32::from_rgb(50, 50, 60)
                         } else {
                             egui::Color32::from_rgb(210, 210, 220)
@@ -422,14 +433,64 @@ impl eframe::App for NoteApp {
                         egui::FontId::proportional(20.0),
                         btn_text_color,
                     );
-                    if plus_resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+                    if plus_resp
+                        .on_hover_cursor(egui::CursorIcon::PointingHand)
+                        .clicked()
+                    {
                         action_new = true;
                     }
 
+                    // --- Chevron ▼ button ---
+                    ui.add_space(4.0);
+                    let chev_size = egui::vec2(28.0, 28.0);
+                    let (chev_rect, chev_resp) =
+                        ui.allocate_exact_size(chev_size, egui::Sense::click());
+                    menu_btn_pos = chev_rect.left_bottom();
+                    let chev_hover = chev_resp.hovered() || self.show_menu;
+                    let chev_painter = ui.painter_at(chev_rect);
+                    if chev_hover {
+                        let chev_hover_bg = if effective_dark {
+                            egui::Color32::from_rgb(50, 50, 60)
+                        } else {
+                            egui::Color32::from_rgb(210, 210, 220)
+                        };
+                        chev_painter.rect_filled(chev_rect, 4.0, chev_hover_bg);
+                    }
+                    let chev_color = if effective_dark {
+                        egui::Color32::WHITE
+                    } else {
+                        egui::Color32::BLACK
+                    };
+                    let cc = chev_rect.center();
+                    let cw = 4.0;
+                    let ch = 2.5;
+                    let chev_stroke = egui::Stroke::new(2.0, chev_color);
+                    chev_painter.line_segment(
+                        [
+                            egui::pos2(cc.x - cw, cc.y - ch),
+                            egui::pos2(cc.x, cc.y + ch),
+                        ],
+                        chev_stroke,
+                    );
+                    chev_painter.line_segment(
+                        [
+                            egui::pos2(cc.x + cw, cc.y - ch),
+                            egui::pos2(cc.x, cc.y + ch),
+                        ],
+                        chev_stroke,
+                    );
+                    if chev_resp
+                        .on_hover_cursor(egui::CursorIcon::PointingHand)
+                        .clicked()
+                    {
+                        self.show_menu = !self.show_menu;
+                        self.menu_just_opened = true;
+                        self.context_note_id = None;
+                    }
                 });
 
                 // --- Close (exit) button on far right ---
-                let btn_text_color = if self.theme == AppTheme::Dark {
+                let btn_text_color = if effective_dark {
                     egui::Color32::WHITE
                 } else {
                     egui::Color32::BLACK
@@ -437,29 +498,47 @@ impl eframe::App for NoteApp {
                 let close_btn_size = egui::vec2(34.0, 30.0);
                 let close_x = ui.available_rect_before_wrap().right() - close_btn_size.x;
                 let close_y = ui.min_rect().min.y;
-                let close_rect = egui::Rect::from_min_size(
-                    egui::pos2(close_x, close_y),
-                    close_btn_size,
-                );
+                let close_rect =
+                    egui::Rect::from_min_size(egui::pos2(close_x, close_y), close_btn_size);
                 let close_resp = ui.allocate_rect(close_rect, egui::Sense::click());
                 let pointer_pos = ctx.pointer_interact_pos();
                 let close_hover = pointer_pos.map_or(false, |p| close_rect.contains(p));
                 let close_painter = ui.painter_at(close_rect);
                 if close_hover {
-                    close_painter.rect_filled(close_rect, 0.0, egui::Color32::from_rgb(232, 17, 35));
+                    close_painter.rect_filled(
+                        close_rect,
+                        0.0,
+                        egui::Color32::from_rgb(232, 17, 35),
+                    );
                 }
                 let xc = close_rect.center();
-                let xs2 = 7.0;
-                let x_stroke2 = egui::Stroke::new(2.0, if close_hover { egui::Color32::WHITE } else { btn_text_color });
+                let xs2 = 5.0;
+                let x_stroke2 = egui::Stroke::new(
+                    2.0,
+                    if close_hover {
+                        egui::Color32::WHITE
+                    } else {
+                        btn_text_color
+                    },
+                );
                 close_painter.line_segment(
-                    [egui::pos2(xc.x - xs2, xc.y - xs2), egui::pos2(xc.x + xs2, xc.y + xs2)],
+                    [
+                        egui::pos2(xc.x - xs2, xc.y - xs2),
+                        egui::pos2(xc.x + xs2, xc.y + xs2),
+                    ],
                     x_stroke2,
                 );
                 close_painter.line_segment(
-                    [egui::pos2(xc.x + xs2, xc.y - xs2), egui::pos2(xc.x - xs2, xc.y + xs2)],
+                    [
+                        egui::pos2(xc.x + xs2, xc.y - xs2),
+                        egui::pos2(xc.x - xs2, xc.y + xs2),
+                    ],
                     x_stroke2,
                 );
-                if close_resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+                if close_resp
+                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+                    .clicked()
+                {
                     std::process::exit(0);
                 }
 
@@ -474,7 +553,8 @@ impl eframe::App for NoteApp {
 
                                 if let Some(sel) = self.selected_tab {
                                     if sel == from {
-                                        self.selected_tab = Some(to.min(self.open_tabs.len().saturating_sub(1)));
+                                        self.selected_tab =
+                                            Some(to.min(self.open_tabs.len().saturating_sub(1)));
                                     } else if from < sel && to >= sel {
                                         self.selected_tab = Some(sel - 1);
                                     } else if from > sel && to <= sel {
@@ -525,35 +605,35 @@ impl eframe::App for NoteApp {
                         Some(self.open_tabs.len().saturating_sub(1))
                     };
                     self.tab_renaming = false;
-                    if content_empty {
+                    if content_empty && note_id != -1 {
                         db::delete_note(&self.db, note_id);
                         self.refresh_list();
                     }
                     self.save_open_tabs();
-                    if self.open_tabs.is_empty() {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
+                    // if self.open_tabs.is_empty() {
+                    //     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    // }
                 }
             });
 
         // --- Menu dropdown (Win11 modern) ---
         if self.show_menu {
-            let menu_text_color = if self.theme == AppTheme::Dark {
+            let menu_text_color = if effective_dark {
                 egui::Color32::WHITE
             } else {
                 egui::Color32::BLACK
             };
-            let menu_bg = if self.theme == AppTheme::Dark {
+            let menu_bg = if effective_dark {
                 egui::Color32::from_rgb(32, 32, 38)
             } else {
                 egui::Color32::WHITE
             };
-            let menu_hover_bg = if self.theme == AppTheme::Dark {
-                egui::Color32::from_rgba_premultiplied(128, 128, 128, 30)
+            let menu_hover_bg = if effective_dark {
+                egui::Color32::from_rgba_premultiplied(128, 128, 128, 55)
             } else {
-                egui::Color32::from_rgba_premultiplied(128, 128, 128, 18)
+                egui::Color32::from_rgba_premultiplied(128, 128, 128, 30)
             };
-            let menu_stroke = if self.theme == AppTheme::Dark {
+            let menu_stroke = if effective_dark {
                 egui::Stroke::new(1.0, egui::Color32::from_gray(60))
             } else {
                 egui::Stroke::new(1.0, egui::Color32::from_gray(200))
@@ -563,125 +643,186 @@ impl eframe::App for NoteApp {
                 .fill(menu_bg)
                 .corner_radius(8.0)
                 .stroke(menu_stroke)
-                .inner_margin(egui::Margin::symmetric(4, 4));
+                .inner_margin(egui::Margin::symmetric(4, 2));
 
             let menu_resp = egui::Area::new(egui::Id::new("menu_dropdown"))
                 .fixed_pos(menu_btn_pos)
                 .show(ctx, |ui| {
-                    let shadow = egui::Frame::new()
-                        .fill(menu_bg)
-                        .corner_radius(8.0);
+                    let shadow = egui::Frame::new().fill(menu_bg).corner_radius(8.0);
                     shadow.show(ui, |ui| {
                         menu_frame.show(ui, |ui| {
-                            ui.set_min_width(200.0);
-                            let item_h = 32.0;
+                            ui.set_width(100.0);
+                            let item_h = 22.0;
 
-                            // Light
-                            let is_light = self.theme == AppTheme::Light;
-                            let (lr, lrsp) = ui.allocate_exact_size(
+                            // Settings
+                            let (sr, srsp) = ui.allocate_exact_size(
                                 egui::vec2(ui.available_width(), item_h),
                                 egui::Sense::click(),
                             );
-                            if lrsp.hovered() {
-                                ui.painter_at(lr).rect_filled(
-                                    lr.shrink2(egui::vec2(4.0, 0.0)), 4.0, menu_hover_bg,
+                            if srsp.hovered() {
+                                ui.painter_at(sr).rect_filled(
+                                    sr.shrink2(egui::vec2(4.0, 0.0)),
+                                    4.0,
+                                    menu_hover_bg,
                                 );
                             }
-                            ui.painter_at(lr).text(
-                                egui::pos2(lr.min.x + 14.0, lr.center().y),
+                            ui.painter_at(sr).text(
+                                egui::pos2(sr.min.x + 8.0, sr.center().y),
                                 egui::Align2::LEFT_CENTER,
-                                if is_light { "✓  ☀  Light" } else { "   ☀  Light" },
-                                egui::FontId::proportional(13.0),
+                                "⚙  Settings",
+                                egui::FontId::proportional(11.0),
                                 menu_text_color,
                             );
-                            if lrsp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
-                                self.theme = AppTheme::Light;
-                                settings::save_theme(self.theme);
-                                self.show_menu = false;
-                            }
-
-                            // Dark
-                            let is_dark = self.theme == AppTheme::Dark;
-                            let (dr, drsp) = ui.allocate_exact_size(
-                                egui::vec2(ui.available_width(), item_h),
-                                egui::Sense::click(),
-                            );
-                            if drsp.hovered() {
-                                ui.painter_at(dr).rect_filled(
-                                    dr.shrink2(egui::vec2(4.0, 0.0)), 4.0, menu_hover_bg,
-                                );
-                            }
-                            ui.painter_at(dr).text(
-                                egui::pos2(dr.min.x + 14.0, dr.center().y),
-                                egui::Align2::LEFT_CENTER,
-                                if is_dark { "✓  🌙  Dark" } else { "   🌙  Dark" },
-                                egui::FontId::proportional(13.0),
-                                menu_text_color,
-                            );
-                            if drsp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
-                                self.theme = AppTheme::Dark;
-                                settings::save_theme(self.theme);
-                                self.show_menu = false;
-                            }
-
-                            ui.separator();
-
-                            // Delete Note
-                            let (dlr, dlrsp) = ui.allocate_exact_size(
-                                egui::vec2(ui.available_width(), item_h),
-                                egui::Sense::click(),
-                            );
-                            if dlrsp.hovered() {
-                                ui.painter_at(dlr).rect_filled(
-                                    dlr.shrink2(egui::vec2(4.0, 0.0)), 4.0, menu_hover_bg,
-                                );
-                            }
-                            ui.painter_at(dlr).text(
-                                egui::pos2(dlr.min.x + 14.0, dlr.center().y),
-                                egui::Align2::LEFT_CENTER,
-                                "🗑  Delete Note",
-                                egui::FontId::proportional(13.0),
-                                if self.theme == AppTheme::Dark {
-                                    egui::Color32::from_rgb(255, 100, 100)
+                            if srsp
+                                .on_hover_cursor(egui::CursorIcon::PointingHand)
+                                .clicked()
+                            {
+                                if let Some(pos) =
+                                    self.open_tabs.iter().position(|t| t.note_id == -1)
+                                {
+                                    self.selected_tab = Some(pos);
                                 } else {
-                                    egui::Color32::from_rgb(200, 50, 50)
-                                },
-                            );
-                            if dlrsp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
-                                self.delete_note();
+                                    self.open_tabs.push(NoteTab {
+                                        note_id: -1,
+                                        title: "⚙  Ayarlar".to_string(),
+                                        content: String::new(),
+                                        is_locked: false,
+                                    });
+                                    self.selected_tab = Some(self.open_tabs.len() - 1);
+                                }
                                 self.show_menu = false;
                             }
 
                             ui.separator();
 
-                            // Exit
-                            let (exr, exrsp) = ui.allocate_exact_size(
+                            // About
+                            let (ar, arsp) = ui.allocate_exact_size(
                                 egui::vec2(ui.available_width(), item_h),
                                 egui::Sense::click(),
                             );
-                            if exrsp.hovered() {
-                                ui.painter_at(exr).rect_filled(
-                                    exr.shrink2(egui::vec2(4.0, 0.0)), 4.0, menu_hover_bg,
+                            if arsp.hovered() {
+                                ui.painter_at(ar).rect_filled(
+                                    ar.shrink2(egui::vec2(4.0, 0.0)),
+                                    4.0,
+                                    menu_hover_bg,
                                 );
                             }
-                            ui.painter_at(exr).text(
-                                egui::pos2(exr.min.x + 14.0, exr.center().y),
+                            ui.painter_at(ar).text(
+                                egui::pos2(ar.min.x + 8.0, ar.center().y),
                                 egui::Align2::LEFT_CENTER,
-                                "✕  Exit",
-                                egui::FontId::proportional(13.0),
+                                "ℹ  About",
+                                egui::FontId::proportional(11.0),
                                 menu_text_color,
                             );
-                            if exrsp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
-                                std::process::exit(0);
+                            if arsp
+                                .on_hover_cursor(egui::CursorIcon::PointingHand)
+                                .clicked()
+                            {
+                                self.show_about = true;
+                                self.about_just_opened = true;
+                                self.show_menu = false;
                             }
                         });
                     });
                 });
 
-            if menu_resp.response.clicked_elsewhere()
+            if !self.menu_just_opened && menu_resp.response.clicked_elsewhere()
                 || ctx.input(|i| i.key_pressed(egui::Key::Escape))
             {
                 self.show_menu = false;
+            }
+        }
+
+        // --- About popup ---
+        if self.show_about {
+            let about_bg = if effective_dark {
+                egui::Color32::from_rgb(32, 32, 38)
+            } else {
+                egui::Color32::WHITE
+            };
+            let about_stroke = if effective_dark {
+                egui::Stroke::new(1.0, egui::Color32::from_gray(60))
+            } else {
+                egui::Stroke::new(1.0, egui::Color32::from_gray(200))
+            };
+            let about_text_color = if effective_dark {
+                egui::Color32::WHITE
+            } else {
+                egui::Color32::BLACK
+            };
+
+            let about_hover_bg = if effective_dark {
+                egui::Color32::from_rgba_premultiplied(100, 100, 255, 60)
+            } else {
+                egui::Color32::from_rgba_premultiplied(0, 100, 200, 35)
+            };
+            let about_ok_bg = if effective_dark {
+                egui::Color32::from_rgb(50, 50, 60)
+            } else {
+                egui::Color32::from_rgb(235, 235, 240)
+            };
+
+            let about_resp = egui::Area::new(egui::Id::new("about_popup"))
+                .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+                .show(ctx, |ui| {
+                    let about_frame = egui::Frame::new()
+                        .fill(about_bg)
+                        .corner_radius(8.0)
+                        .stroke(about_stroke)
+                        .inner_margin(egui::Margin::symmetric(16, 16));
+                    about_frame.show(ui, |ui| {
+                        ui.set_min_width(280.0);
+                        ui.vertical_centered(|ui| {
+                            ui.heading(egui::RichText::new("uNote").color(about_text_color));
+                            ui.add_space(4.0);
+                            ui.label(
+                                egui::RichText::new(format!("v{}", VERSION))
+                                    .color(about_text_color)
+                                    .size(12.0),
+                            );
+                            ui.add_space(8.0);
+                            ui.label(
+                                egui::RichText::new("Secure note-taking vault")
+                                    .color(about_text_color)
+                                    .size(13.0),
+                            );
+                            ui.add_space(4.0);
+                            ui.label(
+                                egui::RichText::new("Rust + egui")
+                                    .color(egui::Color32::from_gray(140))
+                                    .size(11.0),
+                            );
+                            ui.add_space(16.0);
+                            let ok_size = egui::vec2(100.0, 32.0);
+                            let (okr, okresp) =
+                                ui.allocate_exact_size(ok_size, egui::Sense::click());
+                            let okp = ui.painter_at(okr);
+                            if okresp.hovered() {
+                                okp.rect_filled(okr, 6.0, about_hover_bg);
+                            }
+                            okp.rect_filled(okr, 6.0, about_ok_bg);
+                            okp.rect_stroke(okr, 6.0, about_stroke, egui::StrokeKind::Inside);
+                            okp.text(
+                                okr.center(),
+                                egui::Align2::CENTER_CENTER,
+                                "OK",
+                                egui::FontId::proportional(13.0),
+                                about_text_color,
+                            );
+                            if okresp
+                                .on_hover_cursor(egui::CursorIcon::PointingHand)
+                                .clicked()
+                            {
+                                self.show_about = false;
+                            }
+                        });
+                    });
+                });
+
+            if !self.about_just_opened && about_resp.response.clicked_elsewhere()
+                || ctx.input(|i| i.key_pressed(egui::Key::Escape))
+            {
+                self.show_about = false;
             }
         }
 
@@ -697,12 +838,11 @@ impl eframe::App for NoteApp {
             .exact_width(sidebar_w)
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    let btn_text = if self.sidebar_collapsed { "☰" } else { "≡" };
                     let btn_size = egui::vec2(28.0, 28.0);
                     let (btn_rect, btn_resp) =
                         ui.allocate_exact_size(btn_size, egui::Sense::click());
                     let btn_hover_bg = if btn_resp.hovered() {
-                        if self.theme == AppTheme::Dark {
+                        if effective_dark {
                             egui::Color32::from_rgb(50, 50, 60)
                         } else {
                             egui::Color32::from_rgb(210, 210, 220)
@@ -714,19 +854,41 @@ impl eframe::App for NoteApp {
                     if btn_hover_bg != egui::Color32::TRANSPARENT {
                         painter.rect_filled(btn_rect, 4.0, btn_hover_bg);
                     }
-                    let btn_text_color = if self.theme == AppTheme::Dark {
+                    let btn_text_color = if effective_dark {
                         egui::Color32::WHITE
                     } else {
                         egui::Color32::BLACK
                     };
-                    painter.text(
-                        btn_rect.center(),
-                        egui::Align2::CENTER_CENTER,
-                        btn_text,
-                        egui::FontId::proportional(18.0),
-                        btn_text_color,
+                    // Hamburger lines
+                    let sc = btn_rect.center();
+                    let sw = 12.0;
+                    let sg = 4.0;
+                    let s_stroke = egui::Stroke::new(2.0, btn_text_color);
+                    painter.line_segment(
+                        [
+                            egui::pos2(sc.x - sw / 2.0, sc.y - sg),
+                            egui::pos2(sc.x + sw / 2.0, sc.y - sg),
+                        ],
+                        s_stroke,
                     );
-                    if btn_resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+                    painter.line_segment(
+                        [
+                            egui::pos2(sc.x - sw / 2.0, sc.y),
+                            egui::pos2(sc.x + sw / 2.0, sc.y),
+                        ],
+                        s_stroke,
+                    );
+                    painter.line_segment(
+                        [
+                            egui::pos2(sc.x - sw / 2.0, sc.y + sg),
+                            egui::pos2(sc.x + sw / 2.0, sc.y + sg),
+                        ],
+                        s_stroke,
+                    );
+                    if btn_resp
+                        .on_hover_cursor(egui::CursorIcon::PointingHand)
+                        .clicked()
+                    {
                         self.sidebar_collapsed = !self.sidebar_collapsed;
                     }
 
@@ -762,7 +924,7 @@ impl eframe::App for NoteApp {
                                 .collect::<String>()
                                 .to_uppercase();
 
-                            let (bg, fg) = note_avatar_color(i, self.theme);
+                            let (bg, fg) = note_avatar_color(i, effective_dark);
                             egui::Frame::new()
                                 .fill(bg)
                                 .corner_radius(6.0)
@@ -812,8 +974,7 @@ impl eframe::App for NoteApp {
                             let is_sel = self.selected_note == Some(i);
 
                             let display_title = if note.is_locked {
-                                "🔒 ".to_string()
-                                    + &crypto::decrypt(&note.title, &master_pwd)
+                                "🔒 ".to_string() + &crypto::decrypt(&note.title, &master_pwd)
                             } else {
                                 note.title.clone()
                             };
@@ -825,13 +986,13 @@ impl eframe::App for NoteApp {
                             );
 
                             let item_bg = if is_sel {
-                                if self.theme == AppTheme::Dark {
+                                if effective_dark {
                                     egui::Color32::from_rgb(50, 50, 60)
                                 } else {
                                     egui::Color32::from_rgb(225, 225, 235)
                                 }
                             } else if item_resp.hovered() {
-                                if self.theme == AppTheme::Dark {
+                                if effective_dark {
                                     egui::Color32::from_rgb(40, 40, 50)
                                 } else {
                                     egui::Color32::from_rgb(235, 235, 245)
@@ -844,7 +1005,7 @@ impl eframe::App for NoteApp {
                             if item_bg != egui::Color32::TRANSPARENT {
                                 painter.rect_filled(item_rect, 4.0, item_bg);
                             }
-                            let text_color = if self.theme == AppTheme::Dark {
+                            let text_color = if effective_dark {
                                 egui::Color32::WHITE
                             } else {
                                 egui::Color32::BLACK
@@ -866,7 +1027,8 @@ impl eframe::App for NoteApp {
                             }
                             if was_secondary {
                                 self.context_note_id = Some(note.id);
-                                self.context_menu_pos = ctx.pointer_interact_pos()
+                                self.context_menu_pos = ctx
+                                    .pointer_interact_pos()
                                     .unwrap_or(ctx.screen_rect().center());
                                 self.show_menu = false;
                             }
@@ -877,20 +1039,25 @@ impl eframe::App for NoteApp {
 
         // --- Context menu (right-click, Win11 style) ---
         if self.context_note_id.is_some() {
-            let ctx_bg = if self.theme == AppTheme::Dark {
+            let ctx_bg = if effective_dark {
                 egui::Color32::from_rgb(32, 32, 38)
             } else {
                 egui::Color32::WHITE
             };
-            let ctx_stroke = if self.theme == AppTheme::Dark {
+            let ctx_stroke = if effective_dark {
                 egui::Stroke::new(1.0, egui::Color32::from_gray(60))
             } else {
                 egui::Stroke::new(1.0, egui::Color32::from_gray(200))
             };
-            let ctx_hover_bg = if self.theme == AppTheme::Dark {
-                egui::Color32::from_rgba_premultiplied(128, 128, 128, 30)
+            let ctx_hover_bg = if effective_dark {
+                egui::Color32::from_rgba_premultiplied(128, 128, 128, 55)
             } else {
-                egui::Color32::from_rgba_premultiplied(128, 128, 128, 18)
+                egui::Color32::from_rgba_premultiplied(128, 128, 128, 30)
+            };
+            let ctx_text_color = if effective_dark {
+                egui::Color32::WHITE
+            } else {
+                egui::Color32::BLACK
             };
 
             let ctx_id = egui::Id::new("context_menu");
@@ -903,10 +1070,33 @@ impl eframe::App for NoteApp {
                             .fill(ctx_bg)
                             .corner_radius(8.0)
                             .stroke(ctx_stroke)
-                            .inner_margin(egui::Margin::symmetric(4, 4));
+                            .inner_margin(egui::Margin::symmetric(2, 3));
                         ctx_frame.show(ui, |ui| {
-                            ui.set_min_width(200.0);
-                            let item_h = 32.0;
+                            ui.set_width(100.0);
+                            let item_h = 22.0;
+
+                            // Note title header
+                            if let Some(note_id) = self.context_note_id {
+                                if let Some(note) = self.notes.iter().find(|n| n.id == note_id) {
+                                    let title_text = if note.title.len() > 35 {
+                                        format!("{}…", &note.title[..35])
+                                    } else {
+                                        note.title.clone()
+                                    };
+                                    let (tr, _) = ui.allocate_exact_size(
+                                        egui::vec2(ui.available_width(), item_h),
+                                        egui::Sense::hover(),
+                                    );
+                                    ui.painter_at(tr).text(
+                                        egui::pos2(tr.min.x + 8.0, tr.center().y),
+                                        egui::Align2::LEFT_CENTER,
+                                        &title_text,
+                                        egui::FontId::proportional(11.0),
+                                        ctx_text_color,
+                                    );
+                                }
+                            }
+                            ui.separator();
 
                             // Delete Note
                             let (r, resp) = ui.allocate_exact_size(
@@ -915,20 +1105,23 @@ impl eframe::App for NoteApp {
                             );
                             let p = ui.painter_at(r);
                             if resp.hovered() {
-                                p.rect_filled(r.shrink2(egui::vec2(4.0, 0.0)), 4.0, ctx_hover_bg);
+                                p.rect_filled(r.shrink2(egui::vec2(3.0, 0.0)), 3.0, ctx_hover_bg);
                             }
                             p.text(
-                                egui::pos2(r.min.x + 14.0, r.center().y),
+                                egui::pos2(r.min.x + 8.0, r.center().y),
                                 egui::Align2::LEFT_CENTER,
                                 "🗑  Delete Note",
-                                egui::FontId::proportional(13.0),
-                                if self.theme == AppTheme::Dark {
+                                egui::FontId::proportional(11.0),
+                                if effective_dark {
                                     egui::Color32::from_rgb(255, 100, 100)
                                 } else {
                                     egui::Color32::from_rgb(200, 50, 50)
                                 },
                             );
-                            if resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+                            if resp
+                                .on_hover_cursor(egui::CursorIcon::PointingHand)
+                                .clicked()
+                            {
                                 if let Some(note_id) = self.context_note_id {
                                     db::delete_note(&self.db, note_id);
                                     self.open_tabs.retain(|t| t.note_id != note_id);
@@ -940,9 +1133,9 @@ impl eframe::App for NoteApp {
                                     self.selected_note = None;
                                     self.refresh_list();
                                     self.save_open_tabs();
-                                    if self.open_tabs.is_empty() {
-                                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                                    }
+                                    // if self.open_tabs.is_empty() {
+                                    //     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                                    // }
                                 }
                                 self.context_note_id = None;
                             }
@@ -975,15 +1168,146 @@ impl eframe::App for NoteApp {
         let mut saved: Option<(usize, String)> = None;
         egui::CentralPanel::default().show(ctx, |ui| {
             if let Some(tab_idx) = self.selected_tab {
-                if let Some(txt) = self.open_tabs.get(tab_idx).map(|t| t.content.clone()) {
-                    let mut edit_content = txt;
-                    let response = ui.add_sized(
-                        ui.available_size(),
-                        egui::TextEdit::multiline(&mut edit_content)
-                            .font(egui::TextStyle::Monospace),
-                    );
-                    if response.changed() {
-                        saved = Some((tab_idx, edit_content));
+                if let Some(tab) = self.open_tabs.get(tab_idx) {
+                    if tab.note_id == -1 {
+                        // --- Settings UI ---
+                        let text_color = if effective_dark {
+                            egui::Color32::WHITE
+                        } else {
+                            egui::Color32::BLACK
+                        };
+                        let section_bg = if effective_dark {
+                            egui::Color32::from_rgb(28, 28, 34)
+                        } else {
+                            egui::Color32::from_rgb(245, 245, 248)
+                        };
+
+                        ui.add_space(16.0);
+
+                        // Theme
+                        let theme_frame = egui::Frame::new()
+                            .fill(section_bg)
+                            .corner_radius(8.0)
+                            .inner_margin(egui::Margin::symmetric(12, 10));
+                        theme_frame.show(ui, |ui| {
+                            ui.label(
+                                egui::RichText::new("Theme")
+                                    .color(text_color)
+                                    .size(14.0)
+                                    .strong(),
+                            );
+                            ui.add_space(8.0);
+                            ui.horizontal(|ui| {
+                                let themes = [
+                                    (AppTheme::Light, "☀  Light"),
+                                    (AppTheme::Dark, "🌙  Dark"),
+                                    (AppTheme::System, "🖥  System"),
+                                ];
+                                for (variant, label) in themes {
+                                    let is_selected = self.theme == variant;
+                                    let btn_hover_bg = if effective_dark {
+                                        egui::Color32::from_rgba_premultiplied(128, 128, 128, 40)
+                                    } else {
+                                        egui::Color32::from_rgba_premultiplied(128, 128, 128, 25)
+                                    };
+                                    let btn_bg = if effective_dark {
+                                        egui::Color32::from_rgb(40, 40, 48)
+                                    } else {
+                                        egui::Color32::from_rgb(235, 235, 240)
+                                    };
+                                    let btn_sel_border = if effective_dark {
+                                        egui::Color32::from_rgb(100, 140, 255)
+                                    } else {
+                                        egui::Color32::from_rgb(50, 100, 200)
+                                    };
+                                    let btn_unsel_border = if effective_dark {
+                                        egui::Color32::from_gray(50)
+                                    } else {
+                                        egui::Color32::from_gray(200)
+                                    };
+
+                                    let btn_w = 120.0;
+                                    let btn_h = 36.0;
+                                    let (br, brsp) = ui.allocate_exact_size(
+                                        egui::vec2(btn_w, btn_h),
+                                        egui::Sense::click(),
+                                    );
+                                    let bp = ui.painter_at(br);
+                                    if brsp.hovered() || is_selected {
+                                        bp.rect_filled(br, 8.0, btn_hover_bg);
+                                    }
+                                    bp.rect_filled(br, 8.0, btn_bg);
+                                    bp.rect_stroke(
+                                        br,
+                                        8.0,
+                                        egui::Stroke::new(
+                                            if is_selected { 2.0 } else { 1.0 },
+                                            if is_selected {
+                                                btn_sel_border
+                                            } else {
+                                                btn_unsel_border
+                                            },
+                                        ),
+                                        egui::StrokeKind::Inside,
+                                    );
+                                    bp.text(
+                                        br.center(),
+                                        egui::Align2::CENTER_CENTER,
+                                        label,
+                                        egui::FontId::proportional(13.0),
+                                        text_color,
+                                    );
+                                    if brsp
+                                        .on_hover_cursor(egui::CursorIcon::PointingHand)
+                                        .clicked()
+                                    {
+                                        self.theme = variant;
+                                        settings::save_theme(self.theme);
+                                    }
+                                }
+                            });
+                        });
+
+                        ui.add_space(12.0);
+                        // Placeholder sections
+                        let placeholders = ["Database", "Password", "Font", "Backup", "Advanced"];
+                        for ph in placeholders {
+                            let ph_frame = egui::Frame::new()
+                                .fill(section_bg)
+                                .corner_radius(6.0)
+                                .inner_margin(egui::Margin::symmetric(12, 10));
+                            ph_frame.show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(
+                                        egui::RichText::new(ph)
+                                            .color(egui::Color32::from_gray(140))
+                                            .size(13.0),
+                                    );
+                                    ui.with_layout(
+                                        egui::Layout::right_to_left(egui::Align::Center),
+                                        |ui| {
+                                            ui.label(
+                                                egui::RichText::new("─")
+                                                    .color(egui::Color32::from_gray(100))
+                                                    .size(11.0),
+                                            );
+                                        },
+                                    );
+                                });
+                            });
+                            ui.add_space(6.0);
+                        }
+                    } else if let Some(txt) = self.open_tabs.get(tab_idx).map(|t| t.content.clone())
+                    {
+                        let mut edit_content = txt;
+                        let response = ui.add_sized(
+                            ui.available_size(),
+                            egui::TextEdit::multiline(&mut edit_content)
+                                .font(egui::TextStyle::Monospace),
+                        );
+                        if response.changed() {
+                            saved = Some((tab_idx, edit_content));
+                        }
                     }
                 }
             } else {
@@ -1012,7 +1336,7 @@ impl eframe::App for NoteApp {
             .min_height(22.0)
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(format!("{} notes", self.notes.len()));
+                    ui.label(format!("uNote v{}  |  {} notes", VERSION, self.notes.len()));
                     if let Some(tab_idx) = self.selected_tab {
                         if let Some(tab) = self.open_tabs.get(tab_idx) {
                             ui.separator();
@@ -1020,15 +1344,10 @@ impl eframe::App for NoteApp {
                         }
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let icon = if self.theme == AppTheme::Light {
-                            "☀"
-                        } else {
-                            "🌙"
-                        };
-                        let name = if self.theme == AppTheme::Light {
-                            "Light"
-                        } else {
-                            "Dark"
+                        let (icon, name) = match self.theme {
+                            AppTheme::Light => ("☀", "Light"),
+                            AppTheme::Dark => ("🌙", "Dark"),
+                            AppTheme::System => ("🖥", "System"),
                         };
                         ui.label(format!("{} {}", icon, name));
                     });
@@ -1038,5 +1357,7 @@ impl eframe::App for NoteApp {
         if self.search_query != prev_query {
             self.refresh_list();
         }
+
+        // (window border removed)
     }
 }

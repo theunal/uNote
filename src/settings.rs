@@ -21,8 +21,7 @@ impl Default for Settings {
 }
 
 fn settings_path() -> PathBuf {
-    let mut path = std::env::current_exe()
-        .unwrap_or_else(|_| PathBuf::from("uNote-rust"));
+    let mut path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("uNote-rust"));
     path.set_extension("json");
     path
 }

@@ -1,10 +1,11 @@
 use rusqlite::{params, Connection};
 
-use crate::models::Note;
 use crate::crypto;
+use crate::models::Note;
 
 pub fn get_db_path() -> std::path::PathBuf {
-    let mut path = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("uNote-rust"));
+    let mut path =
+        std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("uNote-rust"));
     path.set_extension("db");
     path
 }
@@ -56,8 +57,7 @@ pub fn load_notes(db: &Connection, search_query: &str, master_password: &str) ->
             n.content.clone()
         };
         let q = search_query.to_lowercase();
-        display_title.to_lowercase().contains(&q)
-            || display_content.to_lowercase().contains(&q)
+        display_title.to_lowercase().contains(&q) || display_content.to_lowercase().contains(&q)
     })
     .collect()
 }
