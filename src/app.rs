@@ -6,6 +6,7 @@ use crate::crypto;
 use crate::db;
 use crate::models::{note_avatar_color, AppTheme, NoteTab};
 use crate::settings;
+use crate::theme;
 
 pub const VERSION: &str = "0.1.0";
 
@@ -29,6 +30,10 @@ pub struct NoteApp {
     pub show_about: bool,
     pub menu_just_opened: bool,
     pub about_just_opened: bool,
+    pub font_size: f32,
+    pub word_wrap: bool,
+    pub formatting_enabled: bool,
+    pub restore_tabs: bool,
 }
 
 impl NoteApp {
@@ -57,6 +62,10 @@ impl NoteApp {
             show_about: false,
             menu_just_opened: false,
             about_just_opened: false,
+            font_size: settings::load_font_size(),
+            word_wrap: settings::load_word_wrap(),
+            formatting_enabled: settings::load_formatting_enabled(),
+            restore_tabs: settings::load_restore_tabs(),
         };
         app.refresh_list();
 
@@ -64,25 +73,27 @@ impl NoteApp {
             app.new_note();
         }
 
-        let saved_ids = settings::load_open_tab_ids();
-        for id in saved_ids {
-            if let Some(note) = app.notes.iter().find(|n| n.id == id) {
-                let content = if note.is_locked {
-                    crypto::decrypt(&note.content, &app.master_password)
-                } else {
-                    note.content.clone()
-                };
-                let display_title = if note.is_locked {
-                    crypto::decrypt(&note.title, &app.master_password)
-                } else {
-                    note.title.clone()
-                };
-                app.open_tabs.push(NoteTab {
-                    note_id: note.id,
-                    title: display_title,
-                    content,
-                    is_locked: note.is_locked,
-                });
+        if app.restore_tabs {
+            let saved_ids = settings::load_open_tab_ids();
+            for id in saved_ids {
+                if let Some(note) = app.notes.iter().find(|n| n.id == id) {
+                    let content = if note.is_locked {
+                        crypto::decrypt(&note.content, &app.master_password)
+                    } else {
+                        note.content.clone()
+                    };
+                    let display_title = if note.is_locked {
+                        crypto::decrypt(&note.title, &app.master_password)
+                    } else {
+                        note.title.clone()
+                    };
+                    app.open_tabs.push(NoteTab {
+                        note_id: note.id,
+                        title: display_title,
+                        content,
+                        is_locked: note.is_locked,
+                    });
+                }
             }
         }
 
@@ -197,64 +208,40 @@ impl NoteApp {
 }
 
 impl eframe::App for NoteApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx().clone();
         self.menu_just_opened = false;
         self.about_just_opened = false;
 
-        let effective_dark = match self.theme {
-            AppTheme::Dark => true,
-            AppTheme::Light => false,
-            AppTheme::System => matches!(ctx.system_theme(), Some(egui::Theme::Dark)),
-        };
+        let effective_dark = self.theme.is_dark(&ctx);
 
-        match self.theme {
-            AppTheme::Light => ctx.set_visuals(egui::Visuals::light()),
-            AppTheme::Dark => ctx.set_visuals(egui::Visuals::dark()),
-            AppTheme::System => match ctx.system_theme() {
-                Some(egui::Theme::Light) | None => ctx.set_visuals(egui::Visuals::light()),
-                Some(egui::Theme::Dark) => ctx.set_visuals(egui::Visuals::dark()),
-            },
-        }
+        theme::apply_win11_style(&ctx, effective_dark);
+        let c = theme::colors(effective_dark);
 
         let prev_query = self.search_query.clone();
         let mut action_open: Option<usize> = None;
         let mut action_new = false;
 
         // --- TAB BAR (en üst) ---
-        let (bar_bg, active_bg, inactive_bg, active_text, inactive_text) = if effective_dark {
-            (
-                egui::Color32::from_rgb(22, 22, 26),
-                egui::Color32::from_rgb(30, 30, 36),
-                egui::Color32::from_rgb(26, 26, 32),
-                egui::Color32::WHITE,
-                egui::Color32::from_gray(160),
-            )
-        } else {
-            (
-                egui::Color32::from_rgb(235, 235, 240),
-                egui::Color32::WHITE,
-                egui::Color32::from_rgb(245, 245, 248),
-                egui::Color32::BLACK,
-                egui::Color32::from_gray(90),
-            )
-        };
+        let bar_bg = c.surface;
+        let active_bg = c.surface_hover;
+        let inactive_bg = c.surface;
+        let active_text = c.text;
+        let inactive_text = c.text_secondary;
 
         let mut menu_btn_pos = egui::Pos2::ZERO;
 
-        egui::TopBottomPanel::top("tab_bar")
-            .min_height(34.0)
+        egui::Panel::top("tab_bar")
+            .min_size(36.0)
             .frame(egui::Frame::new().fill(bar_bg))
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 let mut to_close: Option<usize> = None;
                 let mut tab_rects: Vec<egui::Rect> = Vec::new();
                 let mut tab_rename_commit = false;
 
                 // --- Window drag handle + double-click maximize ---
                 let drag_sense = ui.interact(
-                    egui::Rect::from_min_max(
-                        ui.max_rect().min,
-                        egui::pos2(ui.max_rect().max.x - 36.0, ui.max_rect().max.y),
-                    ),
+                    egui::Rect::from_min_max(ui.max_rect().min, ui.max_rect().max),
                     ui.id().with("bar_drag"),
                     egui::Sense::click_and_drag(),
                 );
@@ -272,7 +259,7 @@ impl eframe::App for NoteApp {
                         let text = self.open_tabs[i].title.clone();
                         let is_selected = self.selected_tab == Some(i);
 
-                        let text_w = ctx.fonts(|f| {
+                        let text_w = ctx.fonts_mut(|f| {
                             let galley = f.layout_no_wrap(
                                 text.as_str().into(),
                                 egui::FontId::proportional(13.0),
@@ -317,11 +304,7 @@ impl eframe::App for NoteApp {
                             egui::pos2(tab_rect.max.x - 30.0, tab_rect.center().y - 14.0),
                             egui::vec2(28.0, 28.0),
                         );
-                        let close_hover_bg = if effective_dark {
-                            egui::Color32::from_rgb(80, 40, 40)
-                        } else {
-                            egui::Color32::from_rgb(230, 180, 180)
-                        };
+                        let close_hover_bg = c.danger;
 
                         if is_selected && self.tab_renaming {
                             // Rename mode: use TextEdit widget
@@ -337,7 +320,7 @@ impl eframe::App for NoteApp {
                                 rename_rect.size(),
                                 egui::TextEdit::singleline(&mut self.tab_rename_buf)
                                     .text_color(text_color)
-                                    .frame(true),
+                                    .frame(egui::Frame::default()),
                             );
                             resp.request_focus();
 
@@ -412,18 +395,10 @@ impl eframe::App for NoteApp {
                     let (plus_rect, plus_resp) =
                         ui.allocate_exact_size(btn_size, egui::Sense::click());
                     let plus_hover = plus_resp.hovered();
-                    let btn_text_color = if effective_dark {
-                        egui::Color32::WHITE
-                    } else {
-                        egui::Color32::BLACK
-                    };
+                    let btn_text_color = c.text;
                     let painter = ui.painter_at(plus_rect);
                     if plus_hover {
-                        let plus_hover_bg = if effective_dark {
-                            egui::Color32::from_rgb(50, 50, 60)
-                        } else {
-                            egui::Color32::from_rgb(210, 210, 220)
-                        };
+                        let plus_hover_bg = c.surface_hover;
                         painter.rect_filled(plus_rect, 4.0, plus_hover_bg);
                     }
                     painter.text(
@@ -449,18 +424,10 @@ impl eframe::App for NoteApp {
                     let chev_hover = chev_resp.hovered() || self.show_menu;
                     let chev_painter = ui.painter_at(chev_rect);
                     if chev_hover {
-                        let chev_hover_bg = if effective_dark {
-                            egui::Color32::from_rgb(50, 50, 60)
-                        } else {
-                            egui::Color32::from_rgb(210, 210, 220)
-                        };
+                        let chev_hover_bg = c.surface_hover;
                         chev_painter.rect_filled(chev_rect, 4.0, chev_hover_bg);
                     }
-                    let chev_color = if effective_dark {
-                        egui::Color32::WHITE
-                    } else {
-                        egui::Color32::BLACK
-                    };
+                    let chev_color = c.text;
                     let cc = chev_rect.center();
                     let cw = 4.0;
                     let ch = 2.5;
@@ -487,60 +454,60 @@ impl eframe::App for NoteApp {
                         self.menu_just_opened = true;
                         self.context_note_id = None;
                     }
-                });
 
-                // --- Close (exit) button on far right ---
-                let btn_text_color = if effective_dark {
-                    egui::Color32::WHITE
-                } else {
-                    egui::Color32::BLACK
-                };
-                let close_btn_size = egui::vec2(34.0, 30.0);
-                let close_x = ui.available_rect_before_wrap().right() - close_btn_size.x;
-                let close_y = ui.min_rect().min.y;
-                let close_rect =
-                    egui::Rect::from_min_size(egui::pos2(close_x, close_y), close_btn_size);
-                let close_resp = ui.allocate_rect(close_rect, egui::Sense::click());
-                let pointer_pos = ctx.pointer_interact_pos();
-                let close_hover = pointer_pos.map_or(false, |p| close_rect.contains(p));
-                let close_painter = ui.painter_at(close_rect);
-                if close_hover {
-                    close_painter.rect_filled(
-                        close_rect,
-                        0.0,
-                        egui::Color32::from_rgb(232, 17, 35),
-                    );
-                }
-                let xc = close_rect.center();
-                let xs2 = 5.0;
-                let x_stroke2 = egui::Stroke::new(
-                    2.0,
-                    if close_hover {
-                        egui::Color32::WHITE
-                    } else {
-                        btn_text_color
-                    },
-                );
-                close_painter.line_segment(
-                    [
-                        egui::pos2(xc.x - xs2, xc.y - xs2),
-                        egui::pos2(xc.x + xs2, xc.y + xs2),
-                    ],
-                    x_stroke2,
-                );
-                close_painter.line_segment(
-                    [
-                        egui::pos2(xc.x + xs2, xc.y - xs2),
-                        egui::pos2(xc.x - xs2, xc.y + xs2),
-                    ],
-                    x_stroke2,
-                );
-                if close_resp
-                    .on_hover_cursor(egui::CursorIcon::PointingHand)
-                    .clicked()
-                {
-                    std::process::exit(0);
-                }
+                    ui.add_space(12.0);
+
+                    // --- Search bar + Close button (right-aligned) ---
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        // Close button (en sağ)
+                        let close_btn_size = egui::vec2(34.0, 26.0);
+                        let (close_rect, close_resp) =
+                            ui.allocate_exact_size(close_btn_size, egui::Sense::click());
+                        let close_hover = close_resp.hovered();
+                        let close_painter = ui.painter_at(close_rect);
+                        if close_hover {
+                            close_painter.rect_filled(
+                                close_rect,
+                                0.0,
+                                egui::Color32::from_rgb(232, 17, 35),
+                            );
+                        }
+                        let xc = close_rect.center();
+                        let xs2 = 5.0;
+                        let x_stroke2 = egui::Stroke::new(
+                            2.0,
+                            if close_hover {
+                                egui::Color32::WHITE
+                            } else {
+                                c.text
+                            },
+                        );
+                        close_painter.line_segment(
+                            [egui::pos2(xc.x - xs2, xc.y - xs2), egui::pos2(xc.x + xs2, xc.y + xs2),],
+                            x_stroke2,
+                        );
+                        close_painter.line_segment(
+                            [egui::pos2(xc.x + xs2, xc.y - xs2), egui::pos2(xc.x - xs2, xc.y + xs2),],
+                            x_stroke2,
+                        );
+                        if close_resp
+                            .on_hover_cursor(egui::CursorIcon::PointingHand)
+                            .clicked()
+                        {
+                            std::process::exit(0);
+                        }
+
+                        ui.add_space(6.0);
+
+                        // Search bar (close'un solunda)
+                        ui.add(
+                            egui::TextEdit::singleline(&mut self.search_query)
+                                .hint_text("🔍  Notlarda ara...")
+                                .desired_width(200.0)
+                                .font(egui::FontId::proportional(13.0)),
+                        );
+                    });
+                });
 
                 // --- DnD reorder (after horizontal, inside panel) ---
                 if let Some(from) = self.drag_idx {
@@ -616,28 +583,36 @@ impl eframe::App for NoteApp {
                 }
             });
 
+        // --- Status Bar ---
+        egui::Panel::bottom("status_bar")
+            .min_size(22.0)
+            .frame(egui::Frame::new().fill(c.surface))
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(format!("uNote v{}  |  {} not", VERSION, self.notes.len()));
+                    if let Some(tab_idx) = self.selected_tab {
+                        if let Some(tab) = self.open_tabs.get(tab_idx) {
+                            ui.separator();
+                            ui.label(&tab.title);
+                        }
+                    }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        let (icon, name) = match self.theme {
+                            AppTheme::Light => ("☀", "Light"),
+                            AppTheme::Dark => ("🌙", "Dark"),
+                            AppTheme::System => ("🖥", "System"),
+                        };
+                        ui.label(format!("{} {}", icon, name));
+                    });
+                });
+            });
+
         // --- Menu dropdown (Win11 modern) ---
         if self.show_menu {
-            let menu_text_color = if effective_dark {
-                egui::Color32::WHITE
-            } else {
-                egui::Color32::BLACK
-            };
-            let menu_bg = if effective_dark {
-                egui::Color32::from_rgb(32, 32, 38)
-            } else {
-                egui::Color32::WHITE
-            };
-            let menu_hover_bg = if effective_dark {
-                egui::Color32::from_rgba_premultiplied(128, 128, 128, 55)
-            } else {
-                egui::Color32::from_rgba_premultiplied(128, 128, 128, 30)
-            };
-            let menu_stroke = if effective_dark {
-                egui::Stroke::new(1.0, egui::Color32::from_gray(60))
-            } else {
-                egui::Stroke::new(1.0, egui::Color32::from_gray(200))
-            };
+            let menu_text_color = c.text;
+            let menu_bg = c.surface;
+            let menu_hover_bg = c.surface_hover;
+            let menu_stroke = theme::separator_stroke(effective_dark);
 
             let menu_frame = egui::Frame::new()
                 .fill(menu_bg)
@@ -647,7 +622,7 @@ impl eframe::App for NoteApp {
 
             let menu_resp = egui::Area::new(egui::Id::new("menu_dropdown"))
                 .fixed_pos(menu_btn_pos)
-                .show(ctx, |ui| {
+                .show(&ctx, |ui| {
                     let shadow = egui::Frame::new().fill(menu_bg).corner_radius(8.0);
                     shadow.show(ui, |ui| {
                         menu_frame.show(ui, |ui| {
@@ -669,7 +644,7 @@ impl eframe::App for NoteApp {
                             ui.painter_at(sr).text(
                                 egui::pos2(sr.min.x + 8.0, sr.center().y),
                                 egui::Align2::LEFT_CENTER,
-                                "⚙  Settings",
+                                "⚙  Ayarlar",
                                 egui::FontId::proportional(11.0),
                                 menu_text_color,
                             );
@@ -710,7 +685,7 @@ impl eframe::App for NoteApp {
                             ui.painter_at(ar).text(
                                 egui::pos2(ar.min.x + 8.0, ar.center().y),
                                 egui::Align2::LEFT_CENTER,
-                                "ℹ  About",
+                                "ℹ  Hakkında",
                                 egui::FontId::proportional(11.0),
                                 menu_text_color,
                             );
@@ -735,36 +710,16 @@ impl eframe::App for NoteApp {
 
         // --- About popup ---
         if self.show_about {
-            let about_bg = if effective_dark {
-                egui::Color32::from_rgb(32, 32, 38)
-            } else {
-                egui::Color32::WHITE
-            };
-            let about_stroke = if effective_dark {
-                egui::Stroke::new(1.0, egui::Color32::from_gray(60))
-            } else {
-                egui::Stroke::new(1.0, egui::Color32::from_gray(200))
-            };
-            let about_text_color = if effective_dark {
-                egui::Color32::WHITE
-            } else {
-                egui::Color32::BLACK
-            };
+            let about_bg = c.surface;
+            let about_stroke = theme::separator_stroke(effective_dark);
+            let about_text_color = c.text;
 
-            let about_hover_bg = if effective_dark {
-                egui::Color32::from_rgba_premultiplied(100, 100, 255, 60)
-            } else {
-                egui::Color32::from_rgba_premultiplied(0, 100, 200, 35)
-            };
-            let about_ok_bg = if effective_dark {
-                egui::Color32::from_rgb(50, 50, 60)
-            } else {
-                egui::Color32::from_rgb(235, 235, 240)
-            };
+            let about_hover_bg = c.selection;
+            let about_ok_bg = c.surface_hover;
 
             let about_resp = egui::Area::new(egui::Id::new("about_popup"))
                 .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
-                .show(ctx, |ui| {
+                .show(&ctx, |ui| {
                     let about_frame = egui::Frame::new()
                         .fill(about_bg)
                         .corner_radius(8.0)
@@ -782,14 +737,14 @@ impl eframe::App for NoteApp {
                             );
                             ui.add_space(8.0);
                             ui.label(
-                                egui::RichText::new("Secure note-taking vault")
+                                egui::RichText::new("Güvenli not alma kasası")
                                     .color(about_text_color)
                                     .size(13.0),
                             );
                             ui.add_space(4.0);
                             ui.label(
                                 egui::RichText::new("Rust + egui")
-                                    .color(egui::Color32::from_gray(140))
+                                    .color(c.text_secondary)
                                     .size(11.0),
                             );
                             ui.add_space(16.0);
@@ -805,7 +760,7 @@ impl eframe::App for NoteApp {
                             okp.text(
                                 okr.center(),
                                 egui::Align2::CENTER_CENTER,
-                                "OK",
+                                "Tamam",
                                 egui::FontId::proportional(13.0),
                                 about_text_color,
                             );
@@ -827,243 +782,198 @@ impl eframe::App for NoteApp {
         }
 
         // --- Sidebar ---
-        let sidebar_anim = ctx.animate_bool(egui::Id::new("sidebar_anim"), !self.sidebar_collapsed);
-        let sidebar_w = 40.0 + 220.0 * sidebar_anim;
+        let is_settings_tab = self
+            .selected_tab
+            .and_then(|i| self.open_tabs.get(i))
+            .map_or(false, |t| t.note_id == -1);
 
-        let notes_clone = self.notes.clone();
-        let master_pwd = self.master_password.clone();
+        if !is_settings_tab {
+            let sidebar_anim =
+                ctx.animate_bool(egui::Id::new("sidebar_anim"), !self.sidebar_collapsed);
+            let sidebar_w = 40.0 + 220.0 * sidebar_anim;
 
-        egui::SidePanel::left("sidebar")
-            .resizable(false)
-            .exact_width(sidebar_w)
-            .show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    let btn_size = egui::vec2(28.0, 28.0);
-                    let (btn_rect, btn_resp) =
-                        ui.allocate_exact_size(btn_size, egui::Sense::click());
-                    let btn_hover_bg = if btn_resp.hovered() {
-                        if effective_dark {
-                            egui::Color32::from_rgb(50, 50, 60)
+            let notes_clone = self.notes.clone();
+            let master_pwd = self.master_password.clone();
+
+            egui::Panel::left("sidebar")
+                .resizable(false)
+                .exact_size(sidebar_w)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        let btn_size = egui::vec2(28.0, 28.0);
+                        let (btn_rect, btn_resp) =
+                            ui.allocate_exact_size(btn_size, egui::Sense::click());
+                        let btn_hover_bg = if btn_resp.hovered() {
+                            c.surface_hover
                         } else {
-                            egui::Color32::from_rgb(210, 210, 220)
+                            egui::Color32::TRANSPARENT
+                        };
+                        let painter = ui.painter_at(btn_rect);
+                        if btn_hover_bg != egui::Color32::TRANSPARENT {
+                            painter.rect_filled(btn_rect, 4.0, btn_hover_bg);
                         }
-                    } else {
-                        egui::Color32::TRANSPARENT
-                    };
-                    let painter = ui.painter_at(btn_rect);
-                    if btn_hover_bg != egui::Color32::TRANSPARENT {
-                        painter.rect_filled(btn_rect, 4.0, btn_hover_bg);
-                    }
-                    let btn_text_color = if effective_dark {
-                        egui::Color32::WHITE
-                    } else {
-                        egui::Color32::BLACK
-                    };
-                    // Hamburger lines
-                    let sc = btn_rect.center();
-                    let sw = 12.0;
-                    let sg = 4.0;
-                    let s_stroke = egui::Stroke::new(2.0, btn_text_color);
-                    painter.line_segment(
-                        [
-                            egui::pos2(sc.x - sw / 2.0, sc.y - sg),
-                            egui::pos2(sc.x + sw / 2.0, sc.y - sg),
-                        ],
-                        s_stroke,
-                    );
-                    painter.line_segment(
-                        [
-                            egui::pos2(sc.x - sw / 2.0, sc.y),
-                            egui::pos2(sc.x + sw / 2.0, sc.y),
-                        ],
-                        s_stroke,
-                    );
-                    painter.line_segment(
-                        [
-                            egui::pos2(sc.x - sw / 2.0, sc.y + sg),
-                            egui::pos2(sc.x + sw / 2.0, sc.y + sg),
-                        ],
-                        s_stroke,
-                    );
-                    if btn_resp
-                        .on_hover_cursor(egui::CursorIcon::PointingHand)
-                        .clicked()
-                    {
-                        self.sidebar_collapsed = !self.sidebar_collapsed;
-                    }
-
-                    if !self.sidebar_collapsed {
-                        ui.add(
-                            egui::TextEdit::singleline(&mut self.search_query)
-                                .hint_text("🔍 Ara...")
-                                .desired_width(f32::INFINITY),
+                        let btn_text_color = c.text;
+                        // Hamburger lines
+                        let sc = btn_rect.center();
+                        let sw = 12.0;
+                        let sg = 4.0;
+                        let s_stroke = egui::Stroke::new(2.0, btn_text_color);
+                        painter.line_segment(
+                            [
+                                egui::pos2(sc.x - sw / 2.0, sc.y - sg),
+                                egui::pos2(sc.x + sw / 2.0, sc.y - sg),
+                            ],
+                            s_stroke,
                         );
-                    }
-                });
+                        painter.line_segment(
+                            [
+                                egui::pos2(sc.x - sw / 2.0, sc.y),
+                                egui::pos2(sc.x + sw / 2.0, sc.y),
+                            ],
+                            s_stroke,
+                        );
+                        painter.line_segment(
+                            [
+                                egui::pos2(sc.x - sw / 2.0, sc.y + sg),
+                                egui::pos2(sc.x + sw / 2.0, sc.y + sg),
+                            ],
+                            s_stroke,
+                        );
+                        if btn_resp
+                            .on_hover_cursor(egui::CursorIcon::PointingHand)
+                            .clicked()
+                        {
+                            self.sidebar_collapsed = !self.sidebar_collapsed;
+                        }
+                    });
 
-                if !self.sidebar_collapsed {
-                    ui.add_space(4.0);
-                    if ui.button("➕ Yeni Not").clicked() {
-                        action_new = true;
-                    }
-                    ui.add_space(4.0);
-                    ui.separator();
-                }
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        if self.sidebar_collapsed {
+                            for (i, note) in notes_clone.iter().enumerate() {
+                                let display_title = if note.is_locked {
+                                    crypto::decrypt(&note.title, &master_pwd)
+                                } else {
+                                    note.title.clone()
+                                };
+                                let avatar_text: String = display_title
+                                    .chars()
+                                    .take(3)
+                                    .collect::<String>()
+                                    .to_uppercase();
 
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    if self.sidebar_collapsed {
-                        for (i, note) in notes_clone.iter().enumerate() {
-                            let display_title = if note.is_locked {
-                                crypto::decrypt(&note.title, &master_pwd)
-                            } else {
-                                note.title.clone()
-                            };
-                            let avatar_text: String = display_title
-                                .chars()
-                                .take(3)
-                                .collect::<String>()
-                                .to_uppercase();
-
-                            let (bg, fg) = note_avatar_color(i, effective_dark);
-                            egui::Frame::new()
-                                .fill(bg)
-                                .corner_radius(6.0)
-                                .inner_margin(egui::Margin::symmetric(1, 4))
-                                .show(ui, |ui| {
-                                    ui.vertical_centered(|ui| {
-                                        ui.set_max_width(34.0);
-                                        let label = egui::Label::new(
-                                            egui::RichText::new(&avatar_text)
-                                                .color(fg)
-                                                .size(9.0)
-                                                .strong(),
-                                        )
-                                        .sense(egui::Sense::click());
-                                        if ui
-                                            .add(label)
-                                            .on_hover_cursor(egui::CursorIcon::PointingHand)
-                                            .clicked()
-                                        {
-                                            action_open = Some(i);
-                                        }
+                                let (bg, fg) = note_avatar_color(i, effective_dark);
+                                egui::Frame::new()
+                                    .fill(bg)
+                                    .corner_radius(6.0)
+                                    .inner_margin(egui::Margin::symmetric(1, 4))
+                                    .show(ui, |ui| {
+                                        ui.vertical_centered(|ui| {
+                                            ui.set_max_width(34.0);
+                                            let label = egui::Label::new(
+                                                egui::RichText::new(&avatar_text)
+                                                    .color(fg)
+                                                    .size(9.0)
+                                                    .strong(),
+                                            )
+                                            .sense(egui::Sense::click());
+                                            if ui
+                                                .add(label)
+                                                .on_hover_cursor(egui::CursorIcon::PointingHand)
+                                                .clicked()
+                                            {
+                                                action_open = Some(i);
+                                            }
+                                        });
                                     });
+                            }
+                            if notes_clone.is_empty() {
+                                ui.add_space(8.0);
+                                ui.vertical_centered(|ui| {
+                                    ui.label(
+                                        egui::RichText::new("-")
+                                            .color(c.text_secondary)
+                                            .size(11.0),
+                                    );
                                 });
-                        }
-                        if notes_clone.is_empty() {
-                            ui.add_space(8.0);
-                            ui.vertical_centered(|ui| {
-                                ui.label(
-                                    egui::RichText::new("-")
-                                        .color(egui::Color32::from_gray(120))
-                                        .size(11.0),
-                                );
-                            });
-                        }
-                    } else {
-                        if notes_clone.is_empty() {
-                            ui.add_space(40.0);
-                            ui.vertical_centered(|ui| {
-                                ui.label(
-                                    egui::RichText::new("Henüz not yok")
-                                        .color(egui::Color32::from_gray(160)),
-                                );
-                            });
-                            return;
-                        }
-                        for (i, note) in notes_clone.iter().enumerate() {
-                            let is_sel = self.selected_note == Some(i);
+                            }
+                        } else {
+                            if notes_clone.is_empty() {
+                                ui.add_space(40.0);
+                                ui.vertical_centered(|ui| {
+                                    ui.label(
+                                        egui::RichText::new("Henüz not yok")
+                                            .color(c.text_secondary),
+                                    );
+                                });
+                                return;
+                            }
+                            for (i, note) in notes_clone.iter().enumerate() {
+                                let is_sel = self.selected_note == Some(i);
 
-                            let display_title = if note.is_locked {
-                                "🔒 ".to_string() + &crypto::decrypt(&note.title, &master_pwd)
-                            } else {
-                                note.title.clone()
-                            };
-
-                            let item_w = ui.available_width();
-                            let (item_rect, item_resp) = ui.allocate_exact_size(
-                                egui::vec2(item_w.max(0.0), 26.0),
-                                egui::Sense::click(),
-                            );
-
-                            let item_bg = if is_sel {
-                                if effective_dark {
-                                    egui::Color32::from_rgb(50, 50, 60)
+                                let display_title = if note.is_locked {
+                                    "🔒 ".to_string() + &crypto::decrypt(&note.title, &master_pwd)
                                 } else {
-                                    egui::Color32::from_rgb(225, 225, 235)
-                                }
-                            } else if item_resp.hovered() {
-                                if effective_dark {
-                                    egui::Color32::from_rgb(40, 40, 50)
+                                    note.title.clone()
+                                };
+
+                                let item_w = ui.available_width();
+                                let (item_rect, item_resp) = ui.allocate_exact_size(
+                                    egui::vec2(item_w.max(0.0), 26.0),
+                                    egui::Sense::click(),
+                                );
+
+                                let item_bg = if is_sel {
+                                    c.selection
+                                } else if item_resp.hovered() {
+                                    c.surface_hover
                                 } else {
-                                    egui::Color32::from_rgb(235, 235, 245)
+                                    egui::Color32::TRANSPARENT
+                                };
+
+                                let painter = ui.painter_at(item_rect);
+                                if item_bg != egui::Color32::TRANSPARENT {
+                                    painter.rect_filled(item_rect, 4.0, item_bg);
                                 }
-                            } else {
-                                egui::Color32::TRANSPARENT
-                            };
+                                let text_color = c.text;
+                                painter.text(
+                                    egui::pos2(item_rect.min.x + 8.0, item_rect.center().y),
+                                    egui::Align2::LEFT_CENTER,
+                                    &display_title,
+                                    egui::FontId::proportional(13.0),
+                                    text_color,
+                                );
 
-                            let painter = ui.painter_at(item_rect);
-                            if item_bg != egui::Color32::TRANSPARENT {
-                                painter.rect_filled(item_rect, 4.0, item_bg);
-                            }
-                            let text_color = if effective_dark {
-                                egui::Color32::WHITE
-                            } else {
-                                egui::Color32::BLACK
-                            };
-                            painter.text(
-                                egui::pos2(item_rect.min.x + 8.0, item_rect.center().y),
-                                egui::Align2::LEFT_CENTER,
-                                &display_title,
-                                egui::FontId::proportional(13.0),
-                                text_color,
-                            );
-
-                            let was_secondary = item_resp.secondary_clicked();
-                            if item_resp
-                                .on_hover_cursor(egui::CursorIcon::PointingHand)
-                                .clicked()
-                            {
-                                action_open = Some(i);
-                            }
-                            if was_secondary {
-                                self.context_note_id = Some(note.id);
-                                self.context_menu_pos = ctx
-                                    .pointer_interact_pos()
-                                    .unwrap_or(ctx.screen_rect().center());
-                                self.show_menu = false;
+                                let was_secondary = item_resp.secondary_clicked();
+                                if item_resp
+                                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+                                    .clicked()
+                                {
+                                    action_open = Some(i);
+                                }
+                                if was_secondary {
+                                    self.context_note_id = Some(note.id);
+                                    self.context_menu_pos = ctx
+                                        .pointer_interact_pos()
+                                        .unwrap_or(ctx.content_rect().center());
+                                    self.show_menu = false;
+                                }
                             }
                         }
-                    }
+                    });
                 });
-            });
+        }
 
         // --- Context menu (right-click, Win11 style) ---
         if self.context_note_id.is_some() {
-            let ctx_bg = if effective_dark {
-                egui::Color32::from_rgb(32, 32, 38)
-            } else {
-                egui::Color32::WHITE
-            };
-            let ctx_stroke = if effective_dark {
-                egui::Stroke::new(1.0, egui::Color32::from_gray(60))
-            } else {
-                egui::Stroke::new(1.0, egui::Color32::from_gray(200))
-            };
-            let ctx_hover_bg = if effective_dark {
-                egui::Color32::from_rgba_premultiplied(128, 128, 128, 55)
-            } else {
-                egui::Color32::from_rgba_premultiplied(128, 128, 128, 30)
-            };
-            let ctx_text_color = if effective_dark {
-                egui::Color32::WHITE
-            } else {
-                egui::Color32::BLACK
-            };
+            let ctx_bg = c.surface;
+            let ctx_stroke = theme::separator_stroke(effective_dark);
+            let ctx_hover_bg = c.surface_hover;
+            let ctx_text_color = c.text;
 
             let ctx_id = egui::Id::new("context_menu");
             let ctx_resp = egui::Area::new(ctx_id)
                 .fixed_pos(self.context_menu_pos)
-                .show(ctx, |ui| {
+                .show(&ctx, |ui| {
                     let shadow = egui::Frame::new().fill(ctx_bg).corner_radius(8.0);
                     shadow.show(ui, |ui| {
                         let ctx_frame = egui::Frame::new()
@@ -1110,13 +1020,9 @@ impl eframe::App for NoteApp {
                             p.text(
                                 egui::pos2(r.min.x + 8.0, r.center().y),
                                 egui::Align2::LEFT_CENTER,
-                                "🗑  Delete Note",
+                                "🗑  Notu Sil",
                                 egui::FontId::proportional(11.0),
-                                if effective_dark {
-                                    egui::Color32::from_rgb(255, 100, 100)
-                                } else {
-                                    egui::Color32::from_rgb(200, 50, 50)
-                                },
+                                c.danger,
                             );
                             if resp
                                 .on_hover_cursor(egui::CursorIcon::PointingHand)
@@ -1166,193 +1072,250 @@ impl eframe::App for NoteApp {
 
         // --- Central Editor ---
         let mut saved: Option<(usize, String)> = None;
-        egui::CentralPanel::default().show(ctx, |ui| {
-            if let Some(tab_idx) = self.selected_tab {
-                if let Some(tab) = self.open_tabs.get(tab_idx) {
-                    if tab.note_id == -1 {
-                        // --- Settings UI ---
-                        let text_color = if effective_dark {
-                            egui::Color32::WHITE
-                        } else {
-                            egui::Color32::BLACK
-                        };
-                        let section_bg = if effective_dark {
-                            egui::Color32::from_rgb(28, 28, 34)
-                        } else {
-                            egui::Color32::from_rgb(245, 245, 248)
-                        };
+        egui::CentralPanel::default()
+            .frame(egui::Frame::NONE)
+            .show(ui, |ui| {
+                if let Some(tab_idx) = self.selected_tab {
+                    if let Some(tab) = self.open_tabs.get(tab_idx) {
+                        if tab.note_id == -1 {
+                            // --- Settings UI ---
+                            let text_color = c.text;
+                            let settings_bg = c.bg;
+                            let section_bg = c.surface;
 
-                        ui.add_space(16.0);
+                            let full_rect = ui.available_rect_before_wrap();
+                            ui.painter().rect_filled(full_rect, 0.0, settings_bg);
+                            egui::ScrollArea::vertical().show(ui, |ui| {
+                                    ui.add_space(16.0);
 
-                        // Theme
-                        let theme_frame = egui::Frame::new()
-                            .fill(section_bg)
-                            .corner_radius(8.0)
-                            .inner_margin(egui::Margin::symmetric(12, 10));
-                        theme_frame.show(ui, |ui| {
-                            ui.label(
-                                egui::RichText::new("Theme")
-                                    .color(text_color)
-                                    .size(14.0)
-                                    .strong(),
-                            );
-                            ui.add_space(8.0);
-                            ui.horizontal(|ui| {
-                                let themes = [
-                                    (AppTheme::Light, "☀  Light"),
-                                    (AppTheme::Dark, "🌙  Dark"),
-                                    (AppTheme::System, "🖥  System"),
-                                ];
-                                for (variant, label) in themes {
-                                    let is_selected = self.theme == variant;
-                                    let btn_hover_bg = if effective_dark {
-                                        egui::Color32::from_rgba_premultiplied(128, 128, 128, 40)
-                                    } else {
-                                        egui::Color32::from_rgba_premultiplied(128, 128, 128, 25)
-                                    };
-                                    let btn_bg = if effective_dark {
-                                        egui::Color32::from_rgb(40, 40, 48)
-                                    } else {
-                                        egui::Color32::from_rgb(235, 235, 240)
-                                    };
-                                    let btn_sel_border = if effective_dark {
-                                        egui::Color32::from_rgb(100, 140, 255)
-                                    } else {
-                                        egui::Color32::from_rgb(50, 100, 200)
-                                    };
-                                    let btn_unsel_border = if effective_dark {
-                                        egui::Color32::from_gray(50)
-                                    } else {
-                                        egui::Color32::from_gray(200)
-                                    };
+                                    // Theme
+                                    let theme_frame = egui::Frame::new()
+                                        .fill(section_bg)
+                                        .corner_radius(8.0)
+                                        .inner_margin(egui::Margin::symmetric(12, 10));
+                                    theme_frame.show(ui, |ui| {
+                                        ui.label(
+                                            egui::RichText::new("Tema")
+                                                .color(text_color)
+                                                .size(14.0)
+                                                .strong(),
+                                        );
+                                        ui.add_space(8.0);
+                                        ui.horizontal(|ui| {
+                                            let themes = [
+                                                (AppTheme::Light, "☀  Açık"),
+                                                (AppTheme::Dark, "🌙  Koyu"),
+                                                (AppTheme::System, "🖥  Sistem"),
+                                            ];
+                                            for (variant, label) in themes {
+                                                let is_selected = self.theme == variant;
+                                                let btn_hover_bg = c.surface_hover;
+                                                let btn_bg = c.surface;
+                                                let btn_sel_border = c.accent;
+                                                let btn_unsel_border = c.border;
 
-                                    let btn_w = 120.0;
-                                    let btn_h = 36.0;
-                                    let (br, brsp) = ui.allocate_exact_size(
-                                        egui::vec2(btn_w, btn_h),
-                                        egui::Sense::click(),
-                                    );
-                                    let bp = ui.painter_at(br);
-                                    if brsp.hovered() || is_selected {
-                                        bp.rect_filled(br, 8.0, btn_hover_bg);
-                                    }
-                                    bp.rect_filled(br, 8.0, btn_bg);
-                                    bp.rect_stroke(
-                                        br,
-                                        8.0,
-                                        egui::Stroke::new(
-                                            if is_selected { 2.0 } else { 1.0 },
-                                            if is_selected {
-                                                btn_sel_border
-                                            } else {
-                                                btn_unsel_border
-                                            },
-                                        ),
-                                        egui::StrokeKind::Inside,
-                                    );
-                                    bp.text(
-                                        br.center(),
-                                        egui::Align2::CENTER_CENTER,
-                                        label,
-                                        egui::FontId::proportional(13.0),
-                                        text_color,
-                                    );
-                                    if brsp
-                                        .on_hover_cursor(egui::CursorIcon::PointingHand)
-                                        .clicked()
-                                    {
-                                        self.theme = variant;
-                                        settings::save_theme(self.theme);
-                                    }
-                                }
-                            });
-                        });
+                                                let btn_w = 120.0;
+                                                let btn_h = 36.0;
+                                                let (br, brsp) = ui.allocate_exact_size(
+                                                    egui::vec2(btn_w, btn_h),
+                                                    egui::Sense::click(),
+                                                );
+                                                let bp = ui.painter_at(br);
+                                                if brsp.hovered() || is_selected {
+                                                    bp.rect_filled(br, 8.0, btn_hover_bg);
+                                                }
+                                                bp.rect_filled(br, 8.0, btn_bg);
+                                                bp.rect_stroke(
+                                                    br,
+                                                    8.0,
+                                                    egui::Stroke::new(
+                                                        if is_selected { 2.0 } else { 1.0 },
+                                                        if is_selected {
+                                                            btn_sel_border
+                                                        } else {
+                                                            btn_unsel_border
+                                                        },
+                                                    ),
+                                                    egui::StrokeKind::Inside,
+                                                );
+                                                bp.text(
+                                                    br.center(),
+                                                    egui::Align2::CENTER_CENTER,
+                                                    label,
+                                                    egui::FontId::proportional(13.0),
+                                                    text_color,
+                                                );
+                                                if brsp
+                                                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+                                                    .clicked()
+                                                {
+                                                    self.theme = variant;
+                                                    settings::save_theme(self.theme);
+                                                }
+                                            }
+                                        });
+                                    });
 
-                        ui.add_space(12.0);
-                        // Placeholder sections
-                        let placeholders = ["Database", "Password", "Font", "Backup", "Advanced"];
-                        for ph in placeholders {
-                            let ph_frame = egui::Frame::new()
-                                .fill(section_bg)
-                                .corner_radius(6.0)
-                                .inner_margin(egui::Margin::symmetric(12, 10));
-                            ph_frame.show(ui, |ui| {
-                                ui.horizontal(|ui| {
-                                    ui.label(
-                                        egui::RichText::new(ph)
-                                            .color(egui::Color32::from_gray(140))
-                                            .size(13.0),
-                                    );
-                                    ui.with_layout(
-                                        egui::Layout::right_to_left(egui::Align::Center),
-                                        |ui| {
+                                    ui.add_space(12.0);
+
+                                    // --- Text Formatting ---
+                                    let tf_frame = egui::Frame::new()
+                                        .fill(section_bg)
+                                        .corner_radius(6.0)
+                                        .inner_margin(egui::Margin::symmetric(12, 10));
+                                    tf_frame.show(ui, |ui| {
+                                        ui.label(
+                                            egui::RichText::new("Metin Biçimlendirme")
+                                                .color(text_color)
+                                                .size(14.0)
+                                                .strong(),
+                                        );
+                                        ui.add_space(8.0);
+
+                                        // Font: Consolas (Monospace)
+                                        ui.horizontal(|ui| {
                                             ui.label(
-                                                egui::RichText::new("─")
-                                                    .color(egui::Color32::from_gray(100))
-                                                    .size(11.0),
+                                                egui::RichText::new("Yazı Tipi:")
+                                                    .color(text_color)
+                                                    .size(13.0),
                                             );
-                                        },
-                                    );
+                                            ui.label(
+                                                egui::RichText::new("Consolas (Monospace)")
+                                                    .color(c.text_secondary)
+                                                    .size(13.0),
+                                            );
+                                        });
+
+                                        // Font size
+                                        ui.add_space(4.0);
+                                        ui.horizontal(|ui| {
+                                            ui.label(
+                                                egui::RichText::new("Boyut:")
+                                                    .color(text_color)
+                                                    .size(13.0),
+                                            );
+                                            let mut fs = self.font_size;
+                                            ui.add(
+                                                egui::Slider::new(&mut fs, 8.0..=24.0)
+                                                    .clamping(egui::SliderClamping::Always)
+                                                    .text(""),
+                                            );
+                                            if fs != self.font_size {
+                                                self.font_size = fs.round();
+                                                settings::save_font_size(self.font_size);
+                                            }
+                                            ui.label(
+                                                egui::RichText::new(format!(
+                                                    "{:.0}px",
+                                                    self.font_size
+                                                ))
+                                                .color(c.text_secondary)
+                                                .size(11.0),
+                                            );
+                                        });
+
+                                        // Preview
+                                        ui.add_space(6.0);
+                                        let preview_bg = c.bg;
+                                        let preview_frame = egui::Frame::new()
+                                            .fill(preview_bg)
+                                            .corner_radius(4.0)
+                                            .stroke(theme::separator_stroke(effective_dark))
+                                            .inner_margin(egui::Margin::symmetric(8, 6));
+                                        preview_frame.show(ui, |ui| {
+                                            ui.label(
+                                                egui::RichText::new(
+                                                    "AaBbCc 123!@# — The quick brown fox",
+                                                )
+                                                .font(egui::FontId::monospace(self.font_size))
+                                                .color(text_color),
+                                            );
+                                        });
+
+                                        // Word wrap toggle
+                                        ui.add_space(8.0);
+                                        let mut ww = self.word_wrap;
+                                        ui.checkbox(&mut ww, "Satır Kaydırma");
+                                        if ww != self.word_wrap {
+                                            self.word_wrap = ww;
+                                            settings::save_word_wrap(self.word_wrap);
+                                        }
+
+                                        // Formatting toggle
+                                        let mut fe = self.formatting_enabled;
+                                        ui.checkbox(&mut fe, "Biçimlendirme (Zengin Metin)");
+                                        if fe != self.formatting_enabled {
+                                            self.formatting_enabled = fe;
+                                            settings::save_formatting_enabled(
+                                                self.formatting_enabled,
+                                            );
+                                        }
+                                    });
+
+                                    ui.add_space(8.0);
+
+                                    // --- Advanced ---
+                                    let adv_frame = egui::Frame::new()
+                                        .fill(section_bg)
+                                        .corner_radius(6.0)
+                                        .inner_margin(egui::Margin::symmetric(12, 10));
+                                    adv_frame.show(ui, |ui| {
+                                        ui.label(
+                                            egui::RichText::new("Gelişmiş")
+                                                .color(text_color)
+                                                .size(14.0)
+                                                .strong(),
+                                        );
+                                        ui.add_space(8.0);
+
+                                        // Restore tabs toggle
+                                        let mut rt = self.restore_tabs;
+                                        ui.checkbox(&mut rt, "Başlangıçta sekmeleri geri yükle");
+                                        if rt != self.restore_tabs {
+                                            self.restore_tabs = rt;
+                                            settings::save_restore_tabs(self.restore_tabs);
+                                        }
+                                    });
                                 });
-                            });
-                            ui.add_space(6.0);
-                        }
-                    } else if let Some(txt) = self.open_tabs.get(tab_idx).map(|t| t.content.clone())
-                    {
-                        let mut edit_content = txt;
-                        let response = ui.add_sized(
-                            ui.available_size(),
-                            egui::TextEdit::multiline(&mut edit_content)
-                                .font(egui::TextStyle::Monospace),
-                        );
-                        if response.changed() {
-                            saved = Some((tab_idx, edit_content));
+                        } else if let Some(txt) =
+                            self.open_tabs.get(tab_idx).map(|t| t.content.clone())
+                        {
+                            let mut edit_content = txt;
+                            let mut te = egui::TextEdit::multiline(&mut edit_content)
+                                .desired_width(f32::INFINITY);
+                            if !self.word_wrap {
+                                te = te.desired_rows(1);
+                            }
+                            if !self.formatting_enabled {
+                                te = te.code_editor();
+                            }
+                            te = te.font(egui::FontId::monospace(self.font_size));
+                            let response = ui.add_sized(ui.available_size(), te);
+                            if response.changed() {
+                                saved = Some((tab_idx, edit_content));
+                            }
                         }
                     }
+                } else {
+                    let avail = ui.available_height();
+                    ui.add_space((avail * 0.35).max(60.0));
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("uNote")
+                                .color(c.text_secondary)
+                                .size(36.0),
+                        );
+                        ui.add_space(8.0);
+                        ui.label(
+                            egui::RichText::new("Bir not seçin veya yeni bir not oluşturun")
+                                .color(c.text_secondary),
+                        );
+                    });
                 }
-            } else {
-                let avail = ui.available_height();
-                ui.add_space((avail * 0.35).max(60.0));
-                ui.vertical_centered(|ui| {
-                    ui.label(
-                        egui::RichText::new("uNote")
-                            .color(egui::Color32::from_gray(180))
-                            .size(36.0),
-                    );
-                    ui.add_space(8.0);
-                    ui.label(
-                        egui::RichText::new("Bir not seçin veya yeni bir not oluşturun")
-                            .color(egui::Color32::from_gray(140)),
-                    );
-                });
-            }
-        });
+            });
         if let Some((idx, content)) = saved {
             self.save_tab_content(idx, &content);
         }
-
-        // --- Status Bar ---
-        egui::TopBottomPanel::bottom("status_bar")
-            .min_height(22.0)
-            .show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(format!("uNote v{}  |  {} notes", VERSION, self.notes.len()));
-                    if let Some(tab_idx) = self.selected_tab {
-                        if let Some(tab) = self.open_tabs.get(tab_idx) {
-                            ui.separator();
-                            ui.label(&tab.title);
-                        }
-                    }
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let (icon, name) = match self.theme {
-                            AppTheme::Light => ("☀", "Light"),
-                            AppTheme::Dark => ("🌙", "Dark"),
-                            AppTheme::System => ("🖥", "System"),
-                        };
-                        ui.label(format!("{} {}", icon, name));
-                    });
-                });
-            });
 
         if self.search_query != prev_query {
             self.refresh_list();

@@ -25,6 +25,16 @@ pub enum AppTheme {
     System,
 }
 
+impl AppTheme {
+    pub fn is_dark(&self, ctx: &eframe::egui::Context) -> bool {
+        match self {
+            AppTheme::Light => false,
+            AppTheme::Dark => true,
+            AppTheme::System => matches!(ctx.system_theme(), Some(eframe::egui::Theme::Dark)),
+        }
+    }
+}
+
 pub fn note_avatar_color(index: usize, is_dark: bool) -> (Color32, Color32) {
     const LIGHT: [(Color32, Color32); 8] = [
         (
