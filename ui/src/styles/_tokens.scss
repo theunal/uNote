@@ -1,0 +1,59 @@
+// ---------- Shared tokens ----------
+$radius-s: 6px;
+$radius-m: 10px;
+$radius-window: 8px;
+$titlebar-h: 40px;
+$statusbar-h: 28px;
+$sidebar-w: 220px;
+$sidebar-collapsed-w: 52px;
+
+$ease: cubic-bezier(.2, .7, .2, 1);
+$font-ui: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+$font-mono: "Cascadia Code", "Consolas", monospace;
+
+// Theme tokens
+$themes: (
+  light: (bg: #F3F3F3, surface: #FFFFFF, surface-hover: #f4f4f4, surface-pressed: #F0F0F0,
+    close-hover: #E8E8E8,
+    accent: #0078D4, accent-strong: #106EBE, text: #1A1A1A, text-secondary: #616161,
+    border: #edebeb, separator: #E6E6E6, danger: #C83232,
+    accent-soft: rgba(0, 120, 212, .12), accent-border: rgba(0, 120, 212, .5),
+    danger-soft: rgba(200, 50, 50, .14),
+    glass: rgba(255, 255, 255, .8), glass-strong: rgba(255, 255, 255, .92),
+    frame-bg: #E6E6E6, canvas: #F0F0F0, card: #FFFFFF,
+  ),
+  dark: (bg: #202020, surface: #2D2D2D, surface-hover: #383838, surface-pressed: #444444,
+    close-hover: #4C4C4C,
+    accent: #60CDFF, accent-strong: #4CC2FF, text: #FFFFFF, text-secondary: #9E9E9E,
+    border: #404040, separator: #373737, danger: #FF6464,
+    accent-soft: rgba(96, 205, 255, .14), accent-border: rgba(96, 205, 255, .55),
+    danger-soft: rgba(255, 100, 100, .16),
+    glass: rgba(45, 45, 45, .78), glass-strong: rgba(50, 50, 50, .94),
+    frame-bg: #1E1E1E, canvas: #232323, card: #2B2B2B,
+  ),
+);
+
+:root {
+  --radius-s: #{$radius-s};
+  --radius-m: #{$radius-m};
+  --radius-window: #{$radius-window};
+  --titlebar-h: #{$titlebar-h};
+  --statusbar-h: #{$statusbar-h};
+  --sidebar-w: #{$sidebar-w};
+  --sidebar-collapsed-w: #{$sidebar-collapsed-w};
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, .18), 0 4px 10px rgba(0, 0, 0, .12);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .06);
+  --shadow-2: 0 4px 14px rgba(0, 0, 0, .12);
+  --ring: 0 0 0 3px var(--accent-soft);
+  --font-ui: #{$font-ui};
+  --font-mono: #{$font-mono};
+  --ease: #{$ease};
+}
+
+@each $theme, $tokens in $themes {
+  html[data-theme="#{$theme}"] {
+    @each $name, $value in $tokens {
+      --#{$name}: #{$value};
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import { state, setState, saveSettings } from "../store";
 import { svgSun, svgMoon, svgMonitor } from "../svg";
 
-export function SettingsView() {
+export function Settings() {
   const themeBtns = [
     [svgSun(), "Açık", "light"],
     [svgMoon(), "Koyu", "dark"],
@@ -54,4 +54,4 @@ export function SettingsView() {
   );
 }
 
-export default SettingsView;
+export default Settings;

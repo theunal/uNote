@@ -1,0 +1,79 @@
+// ---------- Input (shared) ----------
+.input {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  transition: border-color .15s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease);
+
+  &:focus-within {
+    border-color: var(--accent);
+    box-shadow: var(--ring);
+  }
+
+  &__icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    opacity: .7;
+    line-height: 0;
+  }
+
+  &__field {
+    border: none;
+    background: none;
+    outline: none;
+    width: 100%;
+    min-width: 0;
+    font: inherit;
+    color: var(--text);
+    padding: 0;
+
+    &::placeholder {
+      color: var(--text-secondary);
+    }
+  }
+
+  &--search {
+    width: 200px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 12.5px;
+  }
+
+  &--title {
+    height: 32px;
+    min-width: 220px;
+    border-radius: 6px;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+
+  &--editor {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+    height: auto;
+    padding: 0;
+    border-radius: 10px;
+
+    .input__field {
+      flex: 1 1 auto;
+      min-height: 0;
+      resize: none;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  }
+}

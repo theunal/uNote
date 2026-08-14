@@ -1,7 +1,7 @@
 import { createStore } from "solid-js/store";
 import { invoke } from "./tauri";
 import { PASSWORD } from "./constants";
-import type { Note, NoteTab, Settings, CtxMenu, RenameState } from "./types";
+import type { Note, NoteTab, Settings, CtxMenu } from "./types";
 
 export interface AppState {
   notes: Note[];
@@ -18,7 +18,6 @@ export interface AppState {
   word_wrap: boolean;
   formatting_enabled: boolean;
   restore_tabs: boolean;
-  rename: RenameState | null;
   dragIndex: number | null;
 }
 
@@ -37,7 +36,6 @@ export const [state, setState] = createStore<AppState>({
   word_wrap: true,
   formatting_enabled: false,
   restore_tabs: true,
-  rename: null,
   dragIndex: null,
 });
 
@@ -81,8 +79,8 @@ export function tabOf(noteId: number) { return state.tabs.findIndex(t => t.note_
 export function openTab(note: Note, select = true) {
   let idx = tabOf(note.id);
   if (idx === -1) {
-    setState("tabs", t => [...t, { note_id: note.id, title: note.title, content: note.content, is_locked: note.is_locked }]);
     idx = state.tabs.length;
+    setState("tabs", t => [...t, { note_id: note.id, title: note.title, content: note.content, is_locked: note.is_locked }]);
   }
   if (select) setState("activeTab", idx);
   setState("selectedNote", note.id);
@@ -104,8 +102,9 @@ export function closeTab(idx: number) {
 export function openSettings() {
   const idx = state.tabs.findIndex(t => t.note_id === -1);
   if (idx === -1) {
+    const len = state.tabs.length;
     setState("tabs", t => [...t, { note_id: -1, title: "⚙  Ayarlar", content: "", is_locked: false }]);
-    setState("activeTab", state.tabs.length);
+    setState("activeTab", len);
   } else {
     setState("activeTab", idx);
   }
@@ -118,20 +117,6 @@ export async function deleteNoteFromList(noteId: number) {
   if (idx !== -1) closeTab(idx);
   await refreshNotes();
   hideMenus();
-}
-
-export async function commitRename() {
-  if (!state.rename) return;
-  const idx = state.rename.index;
-  const buf = state.rename.buf.trim();
-  setState("rename", null);
-  const tab = state.tabs[idx];
-  if (buf && tab && tab.note_id !== -1) {
-    setState("tabs", idx, "title", buf);
-    invoke("save_note_title", {
-      args: { id: tab.note_id, title: buf, is_locked: tab.is_locked, password: PASSWORD },
-    }).then(refreshNotes);
-  }
 }
 
 export function dragReorderTabs(i: number) {
@@ -163,8 +148,4 @@ export function toggleAppMenu() {
 export function openContextMenu(x: number, y: number, noteId: number) {
   setState("showAppMenu", false);
   setState("ctx", { x, y, note_id: noteId });
-}
-
-export function startRename(index: number, buf: string) {
-  setState("rename", { index, buf });
 }

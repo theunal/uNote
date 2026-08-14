@@ -3,7 +3,7 @@ import { state, setState, refreshNotes, openTab, hideMenus } from "./store";
 import { loadSettings } from "./store";
 import { TitleBar } from "./components/TitleBar";
 import { Sidebar } from "./components/Sidebar";
-import { MainView } from "./components/Main";
+import { Main } from "./components/Main";
 import { StatusBar, Overlays } from "./components/Overlays";
 
 function applyTheme() {
@@ -43,7 +43,7 @@ export function App() {
     if (!(e.target as Element).closest(".note-item")) hideMenus();
   };
   const onWinKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Escape") { hideMenus(); setState("rename", null); }
+    if (e.key === "Escape") { hideMenus(); }
   };
   const onWinMouseUp = () => setState("dragIndex", null);
 
@@ -57,7 +57,7 @@ export function App() {
       <TitleBar />
       <div class="content">
         <Sidebar />
-        <MainView />
+        <Main />
       </div>
       <StatusBar />
       <Overlays />

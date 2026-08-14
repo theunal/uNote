@@ -27,11 +27,6 @@ export interface CtxMenu {
   note_id: number;
 }
 
-export interface RenameState {
-  index: number;
-  buf: string;
-}
-
 export interface State {
   notes: Note[];
   tabs: NoteTab[];
@@ -47,6 +42,5 @@ export interface State {
   word_wrap: boolean;
   formatting_enabled: boolean;
   restore_tabs: boolean;
-  rename: RenameState | null;
   dragIndex: number | null;
 }
