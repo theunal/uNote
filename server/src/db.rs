@@ -5,7 +5,7 @@ use crate::models::Note;
 
 pub fn get_db_path() -> std::path::PathBuf {
     let mut path =
-        std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("uNote-rust"));
+        std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("unote-tauri"));
     path.set_extension("db");
     path
 }

@@ -1,0 +1,5 @@
+Dikkat edilecekler:
+- Video büyükse — Webview'daki <video> kontrol etmek yerine Rust tarafında işlem (ör. sıkıştırma) yapmak daha iyi.
+- IPC ile video taşıma — Videoyu JS'e base64 olarak değil, dosya yolu + URL veya convertFileSrc ile erişmelisin (verimli, belleksiz).
+- Kayıt formatı — MediaRecorder genelde WebM üretir; MP4 istenirse Rust'ta dönüşüm gerekir.
+Sonuç: uNote'a ses/video eklemek için Tauri gerçekten ideal — egui'de ses/video oynatma çok daha zahmetli olurdu. Mevcut db.rs (SQLite) ve crypto.rs (AES) mimarin aynen taşınır; sadece app.rs'deki egui UI yerine HTML/JS UI yazarsın.
