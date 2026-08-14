@@ -46,7 +46,7 @@ fn main() -> Result<(), eframe::Error> {
                     }
                 }
 
-                let alpha: u8 = if dark { 200 } else { 210 };
+                let alpha: u8 = if dark { 195 } else { 216 };
                 let color = if dark {
                     (32u8, 32u8, 32u8, alpha)
                 } else {

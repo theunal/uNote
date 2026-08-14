@@ -19,7 +19,7 @@ struct Settings {
     restore_tabs: bool,
 }
 
-fn default_font_size() -> f32 { 11.0 }
+fn default_font_size() -> f32 { 14.0 }
 fn default_true() -> bool { true }
 
 impl Default for Settings {
@@ -27,7 +27,7 @@ impl Default for Settings {
         Settings {
             theme: AppTheme::Light,
             open_tab_ids: Vec::new(),
-            font_size: 11.0,
+            font_size: 14.0,
             word_wrap: true,
             formatting_enabled: false,
             restore_tabs: true,
