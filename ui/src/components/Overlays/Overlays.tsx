@@ -26,7 +26,7 @@ export function Overlays() {
 
       <Show when={state.showAbout}>
         <div class="overlay">
-          <div class="dialog" role="dialog" aria-modal="true" aria-label="Hakkında">
+          <div class="dialog" role="dialog" aria-modal="true" >
             <div class="d-logo">uNote</div>
             <h3>Güvenli Not Alma Kasası</h3>
             <p>Notlarınız AES-256-GCM ile şifrelenir ve yerel olarak saklanır.</p>

@@ -27,6 +27,9 @@ export interface AppState {
   dragIndex: number | null;
   settingsOpen: boolean;
   toast: string | null;
+  cursor_line: number;
+  cursor_col: number;
+  char_count: number;
 }
 
 export const [state, setState] = createStore<AppState>({
@@ -53,6 +56,9 @@ export const [state, setState] = createStore<AppState>({
   dragIndex: null,
   settingsOpen: false,
   toast: null,
+  cursor_line: 1,
+  cursor_col: 1,
+  char_count: 0,
 });
 
 // ---------- Settings ----------
@@ -138,7 +144,7 @@ export function closeTab(idx: number) {
   const next = state.tabs.filter((_, i) => i !== idx);
   setState("tabs", next);
   setState("activeTab", next.length ? Math.min(idx, next.length - 1) : null);
-  if (empty && tab.note_id !== -1) {
+  if (empty) {
     invoke("delete_note", { id: tab.note_id })
       .then(refreshNotes)
       .catch((err) => notifyError(err, "Not silinemedi"));

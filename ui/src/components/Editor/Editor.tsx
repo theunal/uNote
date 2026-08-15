@@ -34,6 +34,17 @@ export function Editor(props: { noteId: number }) {
         }, 300);
     };
 
+    const updateCursor = (e: Event) => {
+        const ta = e.currentTarget as HTMLTextAreaElement;
+        const pos = ta.selectionStart ?? ta.value.length;
+        const before = ta.value.slice(0, pos);
+        const line = before.split("\n").length;
+        const col = pos - before.lastIndexOf("\n");
+        setState("cursor_line", line);
+        setState("cursor_col", col);
+        setState("char_count", ta.value.length);
+    };
+
     return (
         <div class="editor-shell">
             <label for="note-editor" class="sr-only">Not metni</label>
@@ -41,15 +52,17 @@ export function Editor(props: { noteId: number }) {
                 id="note-editor"
                 class="note-editor"
                 spellcheck={state.spell_check}
-                aria-label="Not metni"
                 readonly={tab()?.is_locked}
                 style={{ "font-size": state.font_size + "px", "white-space": state.word_wrap ? "pre-wrap" : "pre" }}
                 value={tab()?.is_locked ? "* Bu not kilitli." : tab()?.content || ""}
                 onInput={onInput}
+                onSelect={updateCursor}
+                onClick={updateCursor}
+                onKeyUp={updateCursor}
             ></textarea>
             <aside id="search-result" class="search-result" aria-live="polite">
                 <span id="result-message"></span>
-                <button class="result-close" id="result-close" type="button" aria-label="Arama sonucunu kapat" innerHTML={svgX()} />
+                <button class="result-close" id="result-close" type="button"  innerHTML={svgX()} />
             </aside>
         </div>
     );

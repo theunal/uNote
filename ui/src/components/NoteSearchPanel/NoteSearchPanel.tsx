@@ -28,7 +28,6 @@ export function NoteSearchPanel() {
           variant="default"
           icon={svgSearch()}
           placeholder="Notlarda ara..."
-          aria-label="Notlarda ara"
           autocomplete="off"
           value={state.searchQuery}
           onInput={(e) => {

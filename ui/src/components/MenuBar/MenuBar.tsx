@@ -60,7 +60,7 @@ export function MenuBar() {
   const stop = (e: MouseEvent) => e.stopPropagation();
 
   return (
-    <nav class="menu-row" aria-label="Not Defteri menüsü">
+    <nav class="menu-row" >
       <button
         class={"menu-button" + (openMenu() === "file-options" ? " active" : "")}
         type="button"
@@ -81,21 +81,21 @@ export function MenuBar() {
       >Görünüm</button>
 
       <Show when={openMenu() === "file-options"}>
-        <div id="file-options" class="menu-popover" role="menu" aria-label="Dosya menüsü" onClick={stop}>
+        <div id="file-options" class="menu-popover" role="menu" onClick={stop}>
           <button type="button" role="menuitem" onClick={onNew}><span>Yeni</span><span class="menu-key">Ctrl + N</span></button>
           <button type="button" role="menuitem" onClick={onClear}><span>Temizle</span><span class="menu-key">Ctrl + L</span></button>
         </div>
       </Show>
 
       <Show when={openMenu() === "edit-options"}>
-        <div id="edit-options" class="menu-popover edit" role="menu" aria-label="Düzenle menüsü" onClick={stop}>
+        <div id="edit-options" class="menu-popover edit" role="menu"  onClick={stop}>
           <button type="button" role="menuitem" onClick={onSelectAll}><span>Tümünü seç</span><span class="menu-key">Ctrl + A</span></button>
           <button type="button" role="menuitem" onClick={onFind}><span>Bul</span><span class="menu-key">Ctrl + F</span></button>
         </div>
       </Show>
 
       <Show when={openMenu() === "view-options"}>
-        <div id="view-options" class="menu-popover view" role="menu" aria-label="Görünüm menüsü" onClick={stop}>
+        <div id="view-options" class="menu-popover view" role="menu"  onClick={stop}>
           <button type="button" role="menuitem" onClick={onToggleWrap}><span>Kelime kaydırma</span><span id="wrap-check">{state.word_wrap ? "✓" : ""}</span></button>
         </div>
       </Show>

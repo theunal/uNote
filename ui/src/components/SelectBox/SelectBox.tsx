@@ -14,7 +14,6 @@ type SelectBoxProps = {
   minWidth?: string;
   class?: string;
   id?: string;
-  ariaLabel?: string;
 };
 
 function toOpt(o: SelectOption): { value: string; label: string } {
@@ -145,7 +144,6 @@ export function SelectBox(props: SelectBoxProps) {
       role="combobox"
       aria-haspopup="listbox"
       aria-expanded={open()}
-      aria-label={props.ariaLabel}
       tabindex="0"
     >
       <div class="selectbox-trigger">
@@ -154,7 +152,7 @@ export function SelectBox(props: SelectBoxProps) {
       </div>
 
       <Show when={open()}>
-        <div class="selectbox-menu" ref={menuRef} role="listbox" aria-label={props.ariaLabel} style={menuStyle()}>
+        <div class="selectbox-menu" ref={menuRef} role="listbox"  style={menuStyle()}>
           <Show when={searchable()}>
             <div class="selectbox-search">
               <span class="selectbox-search-icon" aria-hidden="true" innerHTML={svgSearch()} />

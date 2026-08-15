@@ -79,4 +79,12 @@ body {
   .mt-#{$i} {
     margin-top: calc(#{$i}*0.5rem);
   }
+
+  .ml-#{$i} {
+    margin-left: calc(#{$i}*0.5rem);
+  }
+
+  .mr-#{$i} {
+    margin-right: calc(#{$i}*0.5rem);
+  }
 }

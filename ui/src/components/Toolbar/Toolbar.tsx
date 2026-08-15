@@ -73,7 +73,7 @@ export function Toolbar() {
   // };
 
   return (
-    <section class="toolbar" aria-label="Biçim araçları">
+    <section class="toolbar" >
       {/* <label for="font-picker" class="sr-only">Yazı tipi</label> */}
       {/* <SelectBox id="font-picker" value={font()} options={fonts()} compact searchable minWidth="108px"
         ariaLabel="Yazı tipi" onChange={onFontChange} />
@@ -81,14 +81,14 @@ export function Toolbar() {
       <SelectBox id="size-picker" value={String(size())} options={SIZES} compact searchable minWidth="47px"
         ariaLabel="Yazı boyutu" onChange={(v) => onSizeChange(+v)} /> */}
       {/* <span class="toolbar-divider" aria-hidden="true"></span> */}
-      <button class={"tool-button text-tool bold" + (active().bold ? " active" : "")} type="button" data-command="bold" aria-label="Kalın" onClick={() => toggleCmd("bold")}><strong>B</strong></button>
-      <button class={"tool-button text-tool italic" + (active().italic ? " active" : "")} type="button" data-command="italic" aria-label="İtalik" onClick={() => toggleCmd("italic")}>I</button>
-      <button class={"tool-button text-tool underline" + (active().underline ? " active" : "")} type="button" data-command="underline" aria-label="Altı çizili" onClick={() => toggleCmd("underline")}>U</button>
+      <button class={"tool-button text-tool bold" + (active().bold ? " active" : "")} type="button" data-command="bold" onClick={() => toggleCmd("bold")}><strong>B</strong></button>
+      <button class={"tool-button text-tool italic" + (active().italic ? " active" : "")} type="button" data-command="italic" onClick={() => toggleCmd("italic")}>I</button>
+      <button class={"tool-button text-tool underline" + (active().underline ? " active" : "")} type="button" data-command="underline" onClick={() => toggleCmd("underline")}>U</button>
       <span class="toolbar-divider" aria-hidden="true"></span>
-      <button class={"tool-button" + (active().justifyLeft ? " active" : "")} type="button" data-command="justifyLeft" aria-label="Sola hizala" onClick={() => toggleCmd("justifyLeft")} innerHTML={svgAlignLeft()} />
-      <button class={"tool-button" + (active().justifyCenter ? " active" : "")} type="button" data-command="justifyCenter" aria-label="Ortala" onClick={() => toggleCmd("justifyCenter")} innerHTML={svgAlignCenter()} />
-      <button class={"tool-button" + (active().justifyRight ? " active" : "")} type="button" data-command="justifyRight" aria-label="Sağa hizala" onClick={() => toggleCmd("justifyRight")} innerHTML={svgAlignRight()} />
-      <button class="tool-button" type="button" data-command="insertUnorderedList" aria-label="Madde işaretleri" onClick={() => toggleCmd("insertUnorderedList")} innerHTML={svgList()} />
+      <button class={"tool-button" + (active().justifyLeft ? " active" : "")} type="button" data-command="justifyLeft" onClick={() => toggleCmd("justifyLeft")} innerHTML={svgAlignLeft()} />
+      <button class={"tool-button" + (active().justifyCenter ? " active" : "")} type="button" data-command="justifyCenter" onClick={() => toggleCmd("justifyCenter")} innerHTML={svgAlignCenter()} />
+      <button class={"tool-button" + (active().justifyRight ? " active" : "")} type="button" data-command="justifyRight" onClick={() => toggleCmd("justifyRight")} innerHTML={svgAlignRight()} />
+      <button class="tool-button" type="button" data-command="insertUnorderedList" onClick={() => toggleCmd("insertUnorderedList")} innerHTML={svgList()} />
     </section>
   );
 }

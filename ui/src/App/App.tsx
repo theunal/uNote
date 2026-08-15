@@ -66,7 +66,7 @@ export function App() {
           <div class="editbar">
             <MenuBar />
             <Toolbar />
-            <button class="editbar-settings" type="button"  aria-label="Ayarlar" onClick={() => openSettings()}>
+            <button class="editbar-settings" type="button"  onClick={() => openSettings()}>
               <span innerHTML={svgGear()} />
             </button>
           </div>

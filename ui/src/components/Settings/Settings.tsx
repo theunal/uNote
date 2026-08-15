@@ -30,7 +30,12 @@ function applyFontToEditor() {
   el.style.fontStyle = italic ? "italic" : "normal";
 }
 
-function ToggleSwitch(props: { checked: boolean; label: string; on: string; onChange: (v: boolean) => void }) {
+function ToggleSwitch(props: {
+  checked: boolean;
+  label: string;
+  on: string;
+  onChange: (v: boolean) => void
+}) {
   return (
     <div class="settings-row">
       <label class="switch" aria-label={`${props.label} aç veya kapat`}>
@@ -121,7 +126,7 @@ export function Settings() {
   return (
     <div class="settings-page">
       <header class="settings-header" onMouseDown={onDragDown}>
-        <button class="back-btn" type="button" aria-label="Geri" onClick={() => closeSettings()}>
+        <button class="back-btn" type="button" onClick={() => closeSettings()}>
           <span innerHTML={svgBack()} />
           <span>Geri</span>
         </button>
@@ -142,7 +147,7 @@ export function Settings() {
                 icon={svgPalette()} label="Uygulama teması" description="Görüntülenecek uygulama temasını seçin"
                 open={openCards().theme} onToggle={() => toggleCard("theme")}
               >
-                <div class="theme-options" role="radiogroup" aria-label="Uygulama teması">
+                <div class="theme-options" role="radiogroup" >
                   {themeOpts.map(([val, label]) => (
                     <label class="choice">
                       <input type="radio" name="theme" value={val} checked={state.theme === val}
@@ -168,7 +173,6 @@ export function Settings() {
                       value={state.font_family}
                       options={fonts()}
                       searchable
-                      ariaLabel="Aile"
                       onChange={(v) => set("font_family", v, true)}
                     />
                   </div>
@@ -178,7 +182,6 @@ export function Settings() {
                       value={state.font_style}
                       options={STYLES}
                       searchable={false}
-                      ariaLabel="Stil"
                       onChange={(v) => set("font_style", v, true)}
                     />
                   </div>
@@ -189,7 +192,6 @@ export function Settings() {
                       value={String(state.font_size)}
                       options={SIZES.map(String)}
                       searchable
-                      ariaLabel="Boyut"
                       onChange={(v) => set("font_size", +v, true)}
                     />
                   </div>
@@ -245,7 +247,6 @@ export function Settings() {
                       options={FILE_MODES}
                       searchable={false}
                       minWidth="200px"
-                      ariaLabel="Dosya açma tercihi"
                       onChange={(v) => set("open_files_mode", v)}
                     />
                   </div>
@@ -256,7 +257,7 @@ export function Settings() {
                 icon={svgFileClock()} label="Not Defteri başlatıldığında"
                 open={openCards().startup} onToggle={() => toggleCard("startup")}
               >
-                <div class="startup-options" role="radiogroup" aria-label="Başlangıç tercihi">
+                <div class="startup-options" role="radiogroup" >
                   <label class="choice">
                     <input type="radio" name="startup" checked={state.restore_tabs}
                       onChange={() => set("restore_tabs", true)} />

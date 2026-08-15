@@ -44,7 +44,7 @@ export function TabItem(props: {
         >
             {tab.is_locked ? <span class="lock" innerHTML={svgLock()} /> : null}
             <span class="tab-title">{trunc(tab.title, 15)}</span>
-            <span class="tab-close" role="button" aria-label="Sekmeyi kapat" onClick={(e) => {
+            <span class="tab-close" role="button" onClick={(e) => {
                 e.stopPropagation();
                 closeTab(i);
             }}>
