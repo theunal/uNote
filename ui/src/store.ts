@@ -7,9 +7,8 @@ export interface AppState {
   notes: Note[];
   tabs: NoteTab[];
   activeTab: number | null;
-  selectedNote: number | null;
   searchQuery: string;
-  sidebarCollapsed: boolean;
+  searchOpen: boolean;
   showAppMenu: boolean;
   showAbout: boolean;
   ctx: CtxMenu | null;
@@ -25,9 +24,8 @@ export const [state, setState] = createStore<AppState>({
   notes: [],
   tabs: [],
   activeTab: null,
-  selectedNote: null,
   searchQuery: "",
-  sidebarCollapsed: false,
+  searchOpen: false,
   showAppMenu: false,
   showAbout: false,
   ctx: null,
@@ -83,7 +81,6 @@ export function openTab(note: Note, select = true) {
     setState("tabs", t => [...t, { note_id: note.id, title: note.title, content: note.content, is_locked: note.is_locked }]);
   }
   if (select) setState("activeTab", idx);
-  setState("selectedNote", note.id);
   saveSettings();
 }
 
@@ -138,11 +135,20 @@ export function dragReorderTabs(i: number) {
 export function hideMenus() {
   setState("showAppMenu", false);
   setState("ctx", null);
+  setState("searchOpen", false);
 }
 
 export function toggleAppMenu() {
   setState("showAppMenu", !state.showAppMenu);
   setState("ctx", null);
+}
+
+export function toggleSearch() {
+  setState("searchOpen", !state.searchOpen);
+}
+
+export function openSearch() {
+  setState("searchOpen", true);
 }
 
 export function openContextMenu(x: number, y: number, noteId: number) {

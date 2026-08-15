@@ -7,6 +7,7 @@ import { invoke, appWindow } from "../tauri";
 import { PASSWORD } from "../constants";
 import { TabItem } from "./TabItem";
 import { SearchBox } from "./SearchBox";
+import { NoteSearchPanel } from "./NoteSearchPanel";
 
 export function TitleBar() {
   const onAdd = async () => {
@@ -52,6 +53,7 @@ export function TitleBar() {
       <div class="tbar-right">
         <SearchBox />
       </div>
+      <NoteSearchPanel />
       <div class="winctrl">
         <div class="wc-btn" id="btnMin" title="Küçült" onClick={() => appWindow.minimize()}>
           <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1">

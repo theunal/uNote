@@ -26,21 +26,3 @@ export interface CtxMenu {
   y: number;
   note_id: number;
 }
-
-export interface State {
-  notes: Note[];
-  tabs: NoteTab[];
-  activeTab: number | null;
-  selectedNote: number | null;
-  searchQuery: string;
-  sidebarCollapsed: boolean;
-  showAppMenu: boolean;
-  showAbout: boolean;
-  ctx: CtxMenu | null;
-  theme: string;
-  font_size: number;
-  word_wrap: boolean;
-  formatting_enabled: boolean;
-  restore_tabs: boolean;
-  dragIndex: number | null;
-}

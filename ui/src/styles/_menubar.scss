@@ -1,0 +1,171 @@
+// ---------- MenuBar (Dosya / Düzenle / Görünüm) ----------
+.menu-row {
+  position: relative;
+  height: 31px;
+  flex: 0 0 31px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0 6px;
+  background: var(--glass);
+  border-bottom: 1px solid var(--separator);
+  flex-shrink: 0;
+}
+
+.menu-button {
+  height: 25px;
+  padding: 0 9px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s ease;
+
+  &:hover,
+  &.active {
+    background: var(--surface-hover);
+  }
+}
+
+.menu-popover {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 4px);
+  left: 7px;
+  width: 175px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  box-shadow: var(--shadow-pop);
+}
+
+.menu-popover.edit {
+  left: 56px;
+}
+
+.menu-popover.view {
+  left: 118px;
+}
+
+.menu-popover button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 9px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  text-align: left;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s ease;
+
+  &:hover {
+    background: var(--surface-hover);
+  }
+}
+
+.menu-key {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+// ---------- Toolbar ----------
+.toolbar {
+  min-height: 35px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  overflow-x: auto;
+  background: var(--glass);
+  border-bottom: 1px solid var(--separator);
+  scrollbar-width: none;
+  flex-shrink: 0;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.font-picker,
+.size-picker {
+  height: 23px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-family: inherit;
+}
+
+.font-picker {
+  min-width: 108px;
+}
+
+.size-picker {
+  min-width: 47px;
+}
+
+.tool-button {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    background: var(--surface-hover);
+  }
+
+  &.active {
+    color: var(--text);
+    background: var(--accent-soft);
+  }
+}
+
+.tool-button.text-tool {
+  font-family: var(--font-ui);
+  font-size: 12px;
+}
+
+.tool-button.bold {
+  font-weight: 700;
+}
+
+.tool-button.italic {
+  font-style: italic;
+}
+
+.tool-button.underline {
+  text-decoration: underline;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--separator);
+  flex-shrink: 0;
+}

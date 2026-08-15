@@ -1,22 +1,11 @@
-import { refreshNotes, setState, state } from "../store";
+import { state, toggleSearch } from "../store";
 import { svgSearch } from "../svg";
-import { Input } from "./Input";
 
 export function SearchBox() {
     return (
-        <Input
-            class="searchbox"
-            variant="search"
-            icon={svgSearch()}
-            id="search"
-            placeholder="Notlarda ara..."
-            aria-label="Notlarda ara"
-            autocomplete="off"
-            value={state.searchQuery}
-            onInput={async (e) => {
-                setState("searchQuery", (e.target as HTMLInputElement).value);
-                await refreshNotes();
-            }}
-        />
+        <button class={"searchbox-trigger" + (state.searchOpen ? " open" : "")} type="button" onClick={toggleSearch} title="Notlarda ara">
+            <span class="searchbox-trigger-icon" innerHTML={svgSearch()} />
+            <span class="searchbox-trigger-label">Notlarda ara</span>
+        </button>
     );
 }

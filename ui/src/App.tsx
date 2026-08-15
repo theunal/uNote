@@ -2,7 +2,8 @@ import { createEffect, onMount } from "solid-js";
 import { state, setState, refreshNotes, openTab, hideMenus } from "./store";
 import { loadSettings } from "./store";
 import { TitleBar } from "./components/TitleBar";
-import { Sidebar } from "./components/Sidebar";
+import { MenuBar } from "./components/MenuBar";
+import { Toolbar } from "./components/Toolbar";
 import { Main } from "./components/Main";
 import { StatusBar, Overlays } from "./components/Overlays";
 
@@ -37,10 +38,11 @@ export function App() {
   const onWinClick = (e: MouseEvent) => {
     const t = e.target as Element;
     if (state.showAppMenu && !t.closest("#appMenu") && !t.closest("#btnMenu")) hideMenus();
+    if (state.searchOpen && !t.closest("#searchPanel") && !t.closest(".searchbox-trigger")) hideMenus();
     if (state.ctx && !t.closest("#ctxMenu")) setState("ctx", null);
   };
   const onWinContextMenu = (e: MouseEvent) => {
-    if (!(e.target as Element).closest(".note-item")) hideMenus();
+    if (!(e.target as Element).closest(".search-note")) hideMenus();
   };
   const onWinKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape") { hideMenus(); }
@@ -55,10 +57,9 @@ export function App() {
       onMouseUp={onWinMouseUp}
     >
       <TitleBar />
-      <div class="content">
-        <Sidebar />
-        <Main />
-      </div>
+      <MenuBar />
+      <Toolbar />
+      <Main />
       <StatusBar />
       <Overlays />
     </div>
