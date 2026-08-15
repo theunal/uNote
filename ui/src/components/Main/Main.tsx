@@ -1,7 +1,8 @@
 import { Show } from "solid-js";
-import { state,  } from "../store";
-import { Editor } from "./Editor";
-import Settings from "./Settings";
+import { state,  } from "../../store";
+import "./Main.scss";
+import { Editor } from "../Editor/Editor";
+import Settings from "../Settings/Settings";
 
 export function Main() {
   const activeNoteId = () => {

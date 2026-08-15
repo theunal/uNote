@@ -1,5 +1,6 @@
-import { state, setState, saveSettings } from "../store";
-import { svgSun, svgMoon, svgMonitor } from "../svg";
+import { state, setState, saveSettings } from "../../store";
+import { svgSun, svgMoon, svgMonitor } from "../../svg";
+import "./Settings.scss";
 
 export function Settings() {
   const themeBtns = [

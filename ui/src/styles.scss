@@ -1,16 +1,7 @@
-// ---------- uNote styles (SCSS) ----------
-// Ana dosya: her component ayrı bir partial'da tanımlıdır.
+// ---------- uNote global styles (SCSS) ----------
+// Ana dosya: sadece global stiller. Component stilleri her component'in
+// kendi klasöründeki scss dosyasından import edilir.
 
 @use "styles/tokens";
 @use "styles/base";
-@use "styles/shell";
-@use "styles/input";
-@use "styles/titlebar";
-@use "styles/menubar";
-@use "styles/tabitem";
-@use "styles/searchpanel";
-@use "styles/editor";
-@use "styles/settings";
-@use "styles/statusbar";
-@use "styles/overlays";
 @use "styles/svg";

@@ -1,7 +1,8 @@
-import { PASSWORD } from "../constants";
-import { setState, state } from "../store";
-import { svgX } from "../svg";
-import { invoke } from "../tauri";
+import { PASSWORD } from "../../constants";
+import { setState, state } from "../../store";
+import { svgX } from "../../svg";
+import { invoke } from "../../tauri";
+import "./Editor.scss";
 
 export function Editor(props: { noteId: number }) {
     const tab = () => state.tabs.find(t => t.note_id === props.noteId);

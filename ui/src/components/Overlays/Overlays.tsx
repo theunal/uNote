@@ -1,35 +1,8 @@
 import { Show } from "solid-js";
-import { state, setState, deleteNoteFromList, openSettings } from "../store";
-import { trunc } from "../util";
-import { svgGear, svgInfo, svgTrash, svgSun, svgMoon, svgMonitor } from "../svg";
-import { VERSION } from "../constants";
-
-function ThemeIndicator() {
-  const label = () => state.theme === "dark" ? "Koyu" : state.theme === "light" ? "Açık" : "Sistem";
-  const icon = () => state.theme === "dark" ? svgMoon() : state.theme === "light" ? svgSun() : svgMonitor();
-  return (
-    <span class="theme-ind" id="sbTheme"><span innerHTML={icon()} /> {label()}</span>
-  );
-}
-
-export function StatusBar() {
-  const activeTitle = () => {
-    if (state.activeTab === -1) return "Ayarlar";
-    if (state.activeTab !== null && state.tabs[state.activeTab]) return state.tabs[state.activeTab].title;
-    return "Notlar";
-  };
-
-  return (
-    <div class="statusbar">
-      <span id="sbVersion">uNote v{VERSION}</span>
-      <span class="sep">|</span>
-      <span id="sbCount">{state.notes.length} not</span>
-      <span class="sep">|</span>
-      <span id="sbActive">{activeTitle()}</span>
-      <ThemeIndicator />
-    </div>
-  );
-}
+import { state, setState, deleteNoteFromList, openSettings } from "../../store";
+import { trunc } from "../../util";
+import { svgGear, svgInfo, svgTrash } from "../../svg";
+import "./Overlays.scss";
 
 export function Overlays() {
   const ctxNote = () => state.ctx ? state.notes.find(n => n.id === state.ctx!.note_id) : null;

@@ -1,6 +1,7 @@
-import { closeTab, saveSettings, setState, state } from "../store";
-import { svgLock } from "../svg";
-import { trunc } from "../util";
+import { closeTab, saveSettings, setState, state } from "../../store";
+import { svgLock } from "../../svg";
+import { trunc } from "../../util";
+import "./TabItem.scss";
 
 export function TabItem(props: {
     tab: {

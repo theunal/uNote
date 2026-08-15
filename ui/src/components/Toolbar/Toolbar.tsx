@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
-import { saveSettings, setState, state } from "../store";
-import { svgAlignCenter, svgAlignLeft, svgAlignRight, svgList } from "../svg";
+import { saveSettings, setState, state } from "../../store";
+import { svgAlignCenter, svgAlignLeft, svgAlignRight, svgList } from "../../svg";
+import "./Toolbar.scss";
 
 const editorEl = () => document.getElementById("note-editor") as HTMLTextAreaElement | null;
 

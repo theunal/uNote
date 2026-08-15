@@ -1,5 +1,6 @@
-import { state, toggleSearch } from "../store";
-import { svgSearch } from "../svg";
+import { state, toggleSearch } from "../../store";
+import { svgSearch } from "../../svg";
+import "./SearchBox.scss";
 
 export function SearchBox() {
     return (

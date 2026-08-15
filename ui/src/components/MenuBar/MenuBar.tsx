@@ -1,7 +1,8 @@
 import { Show, createSignal, onCleanup, onMount } from "solid-js";
-import { PASSWORD } from "../constants";
-import { refreshNotes, saveSettings, setState, state, openSearch, openTab } from "../store";
-import { invoke } from "../tauri";
+import { PASSWORD } from "../../constants";
+import { refreshNotes, saveSettings, setState, state, openSearch, openTab } from "../../store";
+import { invoke } from "../../tauri";
+import "./MenuBar.scss";
 
 export function MenuBar() {
   const [openMenu, setOpenMenu] = createSignal<string | null>(null);

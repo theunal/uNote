@@ -1,0 +1,78 @@
+// ---------- MenuBar (Dosya / Düzenle / Görünüm) ----------
+.menu-row {
+  position: relative;
+  height: 31px;
+  flex: 0 0 31px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0 6px;
+  background: var(--glass);
+  border-bottom: 1px solid var(--separator);
+  flex-shrink: 0;
+}
+
+.menu-button {
+  height: 25px;
+  padding: 0 9px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s ease;
+
+  &:hover,
+  &.active {
+    background: var(--surface-hover);
+  }
+}
+
+.menu-popover {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 4px);
+  left: 7px;
+  width: 175px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  box-shadow: var(--shadow-pop);
+}
+
+.menu-popover.edit {
+  left: 56px;
+}
+
+.menu-popover.view {
+  left: 118px;
+}
+
+.menu-popover button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 9px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  text-align: left;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s ease;
+
+  &:hover {
+    background: var(--surface-hover);
+  }
+}
+
+.menu-key {
+  color: var(--text-secondary);
+  font-size: 10px;
+}

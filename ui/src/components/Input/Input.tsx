@@ -1,5 +1,6 @@
 import { Show, splitProps } from "solid-js";
 import type { JSX } from "solid-js";
+import "./Input.scss";
 
 type InputProps = {
   class?: string;

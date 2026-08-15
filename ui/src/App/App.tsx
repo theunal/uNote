@@ -1,11 +1,13 @@
 import { createEffect, onMount } from "solid-js";
-import { state, setState, refreshNotes, openTab, hideMenus } from "./store";
-import { loadSettings } from "./store";
-import { TitleBar } from "./components/TitleBar";
-import { MenuBar } from "./components/MenuBar";
-import { Toolbar } from "./components/Toolbar";
-import { Main } from "./components/Main";
-import { StatusBar, Overlays } from "./components/Overlays";
+import { state, setState, refreshNotes, openTab, hideMenus } from "../store";
+import { loadSettings } from "../store";
+import "./App.scss";
+import { TitleBar } from "../components/TitleBar/TitleBar";
+import { MenuBar } from "../components/MenuBar/MenuBar";
+import { Toolbar } from "../components/Toolbar/Toolbar";
+import { Main } from "../components/Main/Main";
+import { StatusBar } from "../components/StatusBar/StatusBar";
+import { Overlays } from "../components/Overlays/Overlays";
 
 function applyTheme() {
   const dark = state.theme === "dark"

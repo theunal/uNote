@@ -2,12 +2,13 @@ import { For, } from "solid-js";
 import {
   state, setState, refreshNotes, openTab,
   toggleAppMenu,
-} from "../store";
-import { invoke, appWindow } from "../tauri";
-import { PASSWORD } from "../constants";
-import { TabItem } from "./TabItem";
-import { SearchBox } from "./SearchBox";
-import { NoteSearchPanel } from "./NoteSearchPanel";
+} from "../../store";
+import { invoke, appWindow } from "../../tauri";
+import { PASSWORD } from "../../constants";
+import "./TitleBar.scss";
+import { TabItem } from "../TabItem/TabItem";
+import { SearchBox } from "../SearchBox/SearchBox";
+import { NoteSearchPanel } from "../NoteSearchPanel/NoteSearchPanel";
 
 export function TitleBar() {
   const onAdd = async () => {

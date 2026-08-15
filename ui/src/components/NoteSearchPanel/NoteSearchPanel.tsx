@@ -1,9 +1,10 @@
 import { For, Show } from "solid-js";
-import { openContextMenu, openTab, refreshNotes, setState, state } from "../store";
-import { AVATAR_COLORS, PASSWORD } from "../constants";
-import { svgLock, svgSearch } from "../svg";
-import { invoke } from "../tauri";
-import { Input } from "./Input";
+import { openContextMenu, openTab, refreshNotes, setState, state } from "../../store";
+import { AVATAR_COLORS, PASSWORD } from "../../constants";
+import { svgLock, svgSearch } from "../../svg";
+import { invoke } from "../../tauri";
+import "./NoteSearchPanel.scss";
+import { Input } from "../Input/Input";
 
 export function NoteSearchPanel() {
   const onAdd = async () => {
