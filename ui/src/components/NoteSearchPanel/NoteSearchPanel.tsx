@@ -1,18 +1,24 @@
 import { For, Show } from "solid-js";
-import { openContextMenu, openTab, refreshNotes, setState, state } from "../../store";
+import { notifyError, openContextMenu, openTab, refreshNotes, setState, state } from "../../store";
 import { AVATAR_COLORS, PASSWORD } from "../../constants";
 import { svgLock, svgSearch } from "../../svg";
 import { invoke } from "../../tauri";
 import "./NoteSearchPanel.scss";
 import { Input } from "../Input/Input";
 
+let searchTimer: number | undefined;
+
 export function NoteSearchPanel() {
   const onAdd = async () => {
     if (state.searchQuery) setState("searchQuery", "");
-    const id = (await invoke("create_note", { password: PASSWORD })) as number;
-    await refreshNotes();
-    const note = state.notes.find((x) => x.id === id);
-    if (note) openTab(note);
+    try {
+      const id = (await invoke("create_note", { password: PASSWORD })) as number;
+      await refreshNotes();
+      const note = state.notes.find((x) => x.id === id);
+      if (note) openTab(note);
+    } catch (err) {
+      notifyError(err, "Not oluşturulamadı");
+    }
   };
 
   return (
@@ -25,9 +31,10 @@ export function NoteSearchPanel() {
           aria-label="Notlarda ara"
           autocomplete="off"
           value={state.searchQuery}
-          onInput={async (e) => {
+          onInput={(e) => {
             setState("searchQuery", (e.target as HTMLInputElement).value);
-            await refreshNotes();
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(() => { void refreshNotes(); }, 250);
           }}
         />
         <button class="search-panel-add" type="button"  onClick={onAdd}>

@@ -77,6 +77,9 @@ export function App() {
       }>
         <Settings />
       </Show>
+      <Show when={state.toast}>
+        <div class="toast" role="alert">{state.toast}</div>
+      </Show>
     </div>
   );
 }

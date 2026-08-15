@@ -115,8 +115,9 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 13px 16px;
-  border-top: 1px solid var(--separator);
+  // padding: 13px 16px;
+  padding: 0 16px;
+  // border-top: 1px solid var(--separator);
 
   &:first-child {
     border-top: 0;

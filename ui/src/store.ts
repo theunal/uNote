@@ -26,6 +26,7 @@ export interface AppState {
   writing_tools: boolean;
   dragIndex: number | null;
   settingsOpen: boolean;
+  toast: string | null;
 }
 
 export const [state, setState] = createStore<AppState>({
@@ -51,6 +52,7 @@ export const [state, setState] = createStore<AppState>({
   writing_tools: true,
   dragIndex: null,
   settingsOpen: false,
+  toast: null,
 });
 
 // ---------- Settings ----------
@@ -95,10 +97,26 @@ export function saveSettings() {
   });
 }
 
+// ---------- Errors ----------
+let toastTimer: number | undefined;
+
+export function notifyError(err: unknown, fallback = "Bir hata oluştu") {
+  const raw = err instanceof Error ? err.message : String(err ?? "");
+  const msg = raw && !["undefined", "[object Object]"].includes(raw) ? raw : fallback;
+  console.error("[unote]", msg);
+  setState("toast", msg);
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => setState("toast", null), 4000);
+}
+
 // ---------- Data ----------
 export async function refreshNotes() {
-  const notes = (await invoke("list_notes", { args: { query: state.searchQuery, password: PASSWORD } })) as Note[];
-  setState("notes", notes);
+  try {
+    const notes = (await invoke("list_notes", { args: { query: state.searchQuery, password: PASSWORD } })) as Note[];
+    setState("notes", notes);
+  } catch (err) {
+    notifyError(err, "Notlar yüklenemedi");
+  }
 }
 
 // ---------- Tabs ----------
@@ -121,7 +139,9 @@ export function closeTab(idx: number) {
   setState("tabs", next);
   setState("activeTab", next.length ? Math.min(idx, next.length - 1) : null);
   if (empty && tab.note_id !== -1) {
-    invoke("delete_note", { id: tab.note_id }).then(refreshNotes);
+    invoke("delete_note", { id: tab.note_id })
+      .then(refreshNotes)
+      .catch((err) => notifyError(err, "Not silinemedi"));
   }
   saveSettings();
 }
@@ -136,11 +156,16 @@ export function closeSettings() {
 }
 
 export async function deleteNoteFromList(noteId: number) {
-  await invoke("delete_note", { id: noteId });
-  const idx = tabOf(noteId);
-  if (idx !== -1) closeTab(idx);
-  await refreshNotes();
-  hideMenus();
+  try {
+    await invoke("delete_note", { id: noteId });
+    const idx = tabOf(noteId);
+    if (idx !== -1) closeTab(idx);
+    await refreshNotes();
+    hideMenus();
+  } catch (err) {
+    notifyError(err, "Not silinemedi");
+    hideMenus();
+  }
 }
 
 export function dragReorderTabs(i: number) {

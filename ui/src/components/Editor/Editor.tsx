@@ -1,6 +1,6 @@
 import { onMount } from "solid-js";
 import { PASSWORD } from "../../constants";
-import { setState, state } from "../../store";
+import { notifyError, setState, state } from "../../store";
 import { svgX } from "../../svg";
 import { invoke } from "../../tauri";
 import "./Editor.scss";
@@ -30,7 +30,7 @@ export function Editor(props: { noteId: number }) {
             if (idx !== -1) setState("tabs", idx, "content", content);
             invoke("save_note_content", {
                 args: { id: t.note_id, content, is_locked: t.is_locked, password: PASSWORD },
-            });
+            }).catch((err) => notifyError(err, "Not kaydedilemedi"));
         }, 300);
     };
 

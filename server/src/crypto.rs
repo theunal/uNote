@@ -1,41 +1,51 @@
 use aes_gcm::{
-    aead::{Aead, KeyInit},
     Aes256Gcm, Key, Nonce,
+    aead::{Aead, KeyInit},
 };
-use base64::engine::general_purpose::STANDARD as BASE64;
+use argon2::Argon2;
 use base64::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64;
 
-fn get_aes_key(password: &str) -> Key<Aes256Gcm> {
-    let pwd_bytes = password.as_bytes();
+const SALT_LEN: usize = 16;
+
+fn derive_key(password: &str, salt: &[u8]) -> Result<Key<Aes256Gcm>, String> {
     let mut key = [0u8; 32];
-    let len = pwd_bytes.len().min(32);
-    key[..len].copy_from_slice(&pwd_bytes[..len]);
-    *Key::<Aes256Gcm>::from_slice(&key)
+    Argon2::default()
+        .hash_password_into(password.as_bytes(), salt, &mut key)
+        .map_err(|e| format!("argon2 key derivation failed: {e}"))?;
+    Ok(Key::<Aes256Gcm>::from(key))
 }
 
 pub fn encrypt(plaintext: &str, password: &str) -> String {
     if password.is_empty() {
         return plaintext.to_string();
     }
-    let cipher = Aes256Gcm::new(&get_aes_key(password));
+    let salt: [u8; SALT_LEN] = rand::random();
+    let cipher = Aes256Gcm::new(&derive_key(password, &salt).expect("argon2 key derivation failed"));
     let nonce_bytes: [u8; 12] = rand::random();
-    let nonce = Nonce::from_slice(&nonce_bytes);
+    let nonce = Nonce::from(nonce_bytes);
     let ciphertext = cipher
-        .encrypt(nonce, plaintext.as_bytes())
+        .encrypt(&nonce, plaintext.as_bytes())
         .expect("encryption failed");
-    let mut combined = nonce_bytes.to_vec();
+    let mut combined = salt.to_vec();
+    combined.extend_from_slice(&nonce_bytes);
     combined.extend_from_slice(&ciphertext);
     BASE64.encode(&combined)
 }
 
-pub fn decrypt(data: &str, password: &str) -> String {
+pub fn decrypt(data: &str, password: &str) -> Result<String, String> {
     if password.is_empty() {
-        return data.to_string();
+        return Err("master password required".to_string());
     }
-    let bytes = BASE64.decode(data).expect("base64 decode failed");
-    let cipher = Aes256Gcm::new(&get_aes_key(password));
-    let (nonce_bytes, encrypted) = bytes.split_at(12);
-    let nonce = Nonce::from_slice(nonce_bytes);
-    let plaintext = cipher.decrypt(nonce, encrypted).expect("decryption failed");
-    String::from_utf8(plaintext).expect("invalid UTF-8")
+    let bytes = BASE64
+        .decode(data)
+        .map_err(|e| format!("base64 decode failed: {e}"))?;
+    let (salt, rest) = bytes.split_at(SALT_LEN);
+    let cipher = Aes256Gcm::new(&derive_key(password, salt)?);
+    let (nonce_bytes, encrypted) = rest.split_at(12);
+    let nonce = Nonce::try_from(nonce_bytes).map_err(|_| "invalid nonce length".to_string())?;
+    let plaintext = cipher
+        .decrypt(&nonce, encrypted)
+        .map_err(|_| "decryption failed (wrong master password or corrupted data)".to_string())?;
+    String::from_utf8(plaintext).map_err(|e| format!("invalid UTF-8: {e}"))
 }

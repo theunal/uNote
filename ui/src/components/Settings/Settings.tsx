@@ -7,6 +7,7 @@ import {
   svgSpellCheck, svgSparkles,
 } from "../../svg";
 import { SelectBox } from "../SelectBox/SelectBox";
+import { WindowControls } from "../WindowControls/WindowControls";
 import "./Settings.scss";
 
 const DEFAULT_FONTS = ["Space Mono", "DM Sans", "Georgia"];
@@ -42,12 +43,17 @@ function ToggleSwitch(props: { checked: boolean; label: string; on: string; onCh
 }
 
 function CollapsibleCard(props: {
-  icon: string; label: string; description?: string;
-  open: boolean; onToggle: () => void;
-  controls?: any; children?: any;
+  icon: string;
+  label: string;
+  description?: string;
+  open: boolean;
+  onToggle: () => void;
+  controls?: any;
+  children?: any;
+  class?: string;
 }) {
   return (
-    <div class="settings-card">
+    <div class="settings-card" classList={{ [props.class ?? ""]: !!props.class }}>
       <div class="settings-row clickable" onClick={props.onToggle}>
         <span class="row-icon" innerHTML={props.icon} />
         <div class="row-copy">
@@ -96,9 +102,17 @@ export function Settings() {
     showSaved();
   };
 
-  const isInteractive = (t: Element) => t.closest("button") || t.closest(".selectbox") || t.closest("input") || t.closest(".style-menu-wrap");
+  const isInteractive = (t: Element) => t.closest("button") || t.closest(".wc-btn") || t.closest(".selectbox") || t.closest("input") || t.closest(".style-menu-wrap");
   const onDragDown = (e: MouseEvent) => {
     if (e.button !== 0 || isInteractive(e.target as Element)) return;
+    if (e.detail === 2) {
+      e.preventDefault();
+      void (async () => {
+        const m = await appWindow.isMaximized();
+        if (m) await appWindow.unmaximize(); else await appWindow.maximize();
+      })();
+      return;
+    }
     appWindow.startDragging();
   };
 
@@ -112,20 +126,7 @@ export function Settings() {
           <span>Geri</span>
         </button>
         <span class="settings-title">Ayarlar</span>
-        <div class="winctrl">
-          <div class="wc-btn" onClick={() => appWindow.minimize()}>
-            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><line x1="0" y1="5" x2="10" y2="5" /></svg>
-          </div>
-          <div class="wc-btn" onClick={async () => {
-            const m = await appWindow.isMaximized();
-            if (m) await appWindow.unmaximize(); else await appWindow.maximize();
-          }}>
-            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="0.5" y="0.5" width="9" height="9" rx="1" /></svg>
-          </div>
-          <div class="wc-btn close" onClick={() => appWindow.close()}>
-            <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1"><line x1="0" y1="0" x2="10" y2="10" /><line x1="10" y1="0" x2="0" y2="10" /></svg>
-          </div>
-        </div>
+        <WindowControls />
       </header>
 
       <div class="settings-scroll">
@@ -155,7 +156,7 @@ export function Settings() {
 
             <section class="settings-section" aria-labelledby="format-label">
               <h2 id="format-label" class="section-label">Metin Biçimlendirme</h2>
-              <CollapsibleCard
+              <CollapsibleCard class="mb-1"
                 icon={svgType()} label="Yazı Tipi"
                 open={openCards().font} onToggle={() => toggleCard("font")}
               >
@@ -204,18 +205,19 @@ export function Settings() {
                 </div>
               </CollapsibleCard>
 
-              <div class="settings-card mt-1">
+              <div class="settings-card mb-1">
                 <div class="settings-row">
                   <span class="row-icon" innerHTML={svgWrapText()} />
                   <div class="row-copy">
                     <h3 class="row-title">Sözcük kaydırma</h3>
                     <p class="row-description">Sözcükleri pencere genişliğine sığdırın</p>
                   </div>
-                  <ToggleSwitch checked={state.word_wrap} label="Sözcük kaydırma" on="Açık" onChange={(v) => set("word_wrap", v)} />
+                  <ToggleSwitch checked={state.word_wrap} label="Sözcük kaydırma" on="Açık"
+                    onChange={(v) => set("word_wrap", v)} />
                 </div>
               </div>
 
-              <div class="settings-card mt-1">
+              <div class="settings-card">
                 <div class="settings-row">
                   <span class="row-icon" innerHTML={svgWandSparkles()} />
                   <div class="row-copy">
@@ -228,27 +230,29 @@ export function Settings() {
 
             <section class="settings-section" aria-labelledby="startup-label">
               <h2 id="startup-label" class="section-label">Not Defteri Açılıyor</h2>
-              <div class="settings-card">
+              <div class="settings-card mb-1">
                 <div class="settings-row">
                   <span class="row-icon" innerHTML={svgFolderOpen()} />
                   <div class="row-copy">
                     <h3 class="row-title">Dosyaları açma</h3>
                     <p class="row-description">Dosyalarınızın nerede açılacağını seçin</p>
                   </div>
-                  <label for="open-files" class="sr-only">Dosya açma tercihi</label>
-                  <SelectBox
-                    id="open-files"
-                    value={state.open_files_mode}
-                    options={FILE_MODES}
-                    searchable={false}
-                    minWidth="155px"
-                    ariaLabel="Dosya açma tercihi"
-                    onChange={(v) => set("open_files_mode", v)}
-                  />
+                  <div>
+                    <label for="open-files" class="sr-only">Dosya açma tercihi</label>
+                    <SelectBox
+                      id="open-files"
+                      value={state.open_files_mode}
+                      options={FILE_MODES}
+                      searchable={false}
+                      minWidth="200px"
+                      ariaLabel="Dosya açma tercihi"
+                      onChange={(v) => set("open_files_mode", v)}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <CollapsibleCard
+              <CollapsibleCard class="mb-1"
                 icon={svgFileClock()} label="Not Defteri başlatıldığında"
                 open={openCards().startup} onToggle={() => toggleCard("startup")}
               >
@@ -266,7 +270,7 @@ export function Settings() {
                 </div>
               </CollapsibleCard>
 
-              <div class="settings-card mt-1">
+              <div class="settings-card">
                 <div class="settings-row">
                   <span class="row-icon" innerHTML={svgHistory()} />
                   <div class="row-copy">
@@ -279,7 +283,7 @@ export function Settings() {
 
             <section class="settings-section" aria-labelledby="spell-label">
               <h2 id="spell-label" class="section-label">Yazım Denetimi</h2>
-              <div class="settings-card">
+              <div class="settings-card mb-1">
                 <div class="settings-row">
                   <span class="row-icon" innerHTML={svgSpellCheck()} />
                   <div class="row-copy">
@@ -289,7 +293,7 @@ export function Settings() {
                   <ToggleSwitch checked={state.spell_check} label="Yazım denetimi" on="Açık" onChange={(v) => set("spell_check", v)} />
                 </div>
               </div>
-              <div class="settings-card mt-1">
+              <div class="settings-card">
                 <div class="settings-row">
                   <span class="row-icon" innerHTML={svgWandSparkles()} />
                   <div class="row-copy">

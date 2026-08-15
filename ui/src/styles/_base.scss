@@ -70,3 +70,13 @@ body {
     animation: none !important;
   }
 }
+
+@for $i from 1 through 5 {
+  .mb-#{$i} {
+    margin-bottom: calc(#{$i}*0.5rem);
+  }
+
+  .mt-#{$i} {
+    margin-top: calc(#{$i}*0.5rem);
+  }
+}

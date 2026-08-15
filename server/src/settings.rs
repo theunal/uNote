@@ -41,9 +41,10 @@ impl Default for Settings {
 }
 
 fn settings_path() -> std::path::PathBuf {
-    let mut path =
-        std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("unote-tauri"));
-    path.set_extension("json");
+    let mut path = dirs::data_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    path.push("unote");
+    std::fs::create_dir_all(&path).ok();
+    path.push("settings.json");
     path
 }
 

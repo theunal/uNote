@@ -1,0 +1,39 @@
+// ---------- Window controls (min/max/close) ----------
+.winctrl {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  align-self: normal;
+}
+
+.wc-btn {
+  width: 46px;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  transition: background .12s, color .12s;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--text-secondary);
+  }
+
+  &:hover {
+    background: var(--close-hover);
+    color: var(--text);
+
+    svg {
+      fill: var(--text);
+    }
+  }
+
+  &.close:hover {
+    background: var(--danger);
+    color: #fff;
+
+    svg {
+      fill: #fff;
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { For, } from "solid-js";
 import {
-  state, setState, refreshNotes, openTab,
+  state, setState, refreshNotes, openTab, notifyError,
 } from "../../store";
 import { invoke, appWindow } from "../../tauri";
 import { PASSWORD } from "../../constants";
@@ -8,32 +8,44 @@ import "./TitleBar.scss";
 import { TabItem } from "../TabItem/TabItem";
 import { SearchBox } from "../SearchBox/SearchBox";
 import { NoteSearchPanel } from "../NoteSearchPanel/NoteSearchPanel";
+import { WindowControls } from "../WindowControls/WindowControls";
 
 export function TitleBar() {
   const onAdd = async () => {
     if (state.searchQuery) setState("searchQuery", "");
-    const id = (await invoke("create_note", { password: PASSWORD })) as number;
-    await refreshNotes();
-    const note = state.notes.find((x) => x.id === id);
-    if (note) openTab(note);
+    try {
+      const id = (await invoke("create_note", { password: PASSWORD })) as number;
+      await refreshNotes();
+      const note = state.notes.find((x) => x.id === id);
+      if (note) openTab(note);
+    } catch (err) {
+      notifyError(err, "Not oluşturulamadı");
+    }
   };
 
   const isInteractive = (t: Element) => t.closest(".tab") || t.closest(".icon-btn") ||
     t.closest(".wc-btn") || t.closest(".searchbox") || t.closest("input");
 
+  const toggleMaximize = async () => {
+    const isMaximized = await appWindow.isMaximized();
+    if (isMaximized)
+      await appWindow.unmaximize();
+    else
+      await appWindow.maximize();
+  };
+
   const onDragDown = (e: MouseEvent) => {
     if (e.button !== 0 || isInteractive(e.target as Element)) return;
+    if (e.detail === 2) {
+      e.preventDefault();
+      void toggleMaximize();
+      return;
+    }
     appWindow.startDragging();
-  };
-  const onDragDblClick = async (e: MouseEvent) => {
-    if (isInteractive(e.target as Element)) return;
-    const m = await appWindow.isMaximized();
-    if (m) await appWindow.unmaximize(); else await appWindow.maximize();
   };
 
   return (
-    <div class="titlebar" onMouseDown={onDragDown} onDblClick={onDragDblClick}
-    >
+    <div class="titlebar" onMouseDown={onDragDown}>
       <div class="drag">
         <div class="tabs" id="tabs">
           <For each={state.tabs}>{(tab, i) => <TabItem tab={tab} index={i()} />}</For>
@@ -54,23 +66,7 @@ export function TitleBar() {
         <SearchBox />
       </div>
       <NoteSearchPanel />
-      <div class="winctrl">
-        <div class="wc-btn" id="btnMin" onClick={() => appWindow.minimize()}>
-          <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1">
-            <line x1="0" y1="5" x2="10" y2="5" /></svg>
-        </div>
-        <div class="wc-btn" id="btnMax" onClick={async () => {
-          const m = await appWindow.isMaximized();
-          if (m) await appWindow.unmaximize(); else await appWindow.maximize();
-        }}>
-          <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1">
-            <rect x="0.5" y="0.5" width="9" height="9" rx="1" /></svg>
-        </div>
-        <div class="wc-btn close" id="btnClose" onClick={() => appWindow.close()}>
-          <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.1">
-            <line x1="0" y1="0" x2="10" y2="10" /><line x1="10" y1="0" x2="0" y2="10" /></svg>
-        </div>
-      </div>
+      <WindowControls />
     </div>
   );
 }

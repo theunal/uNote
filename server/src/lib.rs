@@ -49,7 +49,7 @@ struct AppState {
 
 fn to_dto(n: &Note, password: &str) -> NoteDto {
     let title = if n.is_locked {
-        crypto::decrypt(&n.title, password)
+        crypto::decrypt(&n.title, password).unwrap_or_default()
     } else {
         n.title.clone()
     };
@@ -68,64 +68,60 @@ fn to_dto(n: &Note, password: &str) -> NoteDto {
 }
 
 #[tauri::command]
-fn list_notes(args: ListArgs, state: State<AppState>) -> Vec<NoteDto> {
-    let db = state.db.lock().unwrap();
-    db::load_notes(&db, &args.query, &args.password)
-        .iter()
-        .map(|n| to_dto(n, &args.password))
-        .collect()
+fn list_notes(args: ListArgs, state: State<AppState>) -> Result<Vec<NoteDto>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let notes = db::load_notes(&db, &args.query, &args.password).map_err(|e| e.to_string())?;
+    Ok(notes.iter().map(|n| to_dto(n, &args.password)).collect())
 }
 
 #[tauri::command]
-fn create_note(_password: String, state: State<AppState>) -> i64 {
-    let db = state.db.lock().unwrap();
+fn create_note(_password: String, state: State<AppState>) -> Result<i64, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
     let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    db::insert_note(&db, "Yeni Not", "", false, &now);
+    db::insert_note(&db, "Yeni Not", "", false, &now).map_err(|e| e.to_string())?;
     // Return last inserted id
-    let id: i64 = db
-        .query_row("SELECT last_insert_rowid()", [], |r| r.get(0))
-        .unwrap_or(0);
-    id
+    db.query_row("SELECT last_insert_rowid()", [], |r| r.get(0))
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn get_note(id: i64, password: String, state: State<AppState>) -> Option<NoteDto> {
-    let db = state.db.lock().unwrap();
-    db.load_notes_into("", &password)
-        .unwrap()
+fn get_note(id: i64, password: String, state: State<AppState>) -> Result<Option<NoteDto>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let notes = db::load_notes(&db, "", &password).map_err(|e| e.to_string())?;
+    Ok(notes
         .iter()
         .find(|n| n.id == id)
-        .map(|n| to_dto(n, &password))
+        .map(|n| to_dto(n, &password)))
 }
 
 #[tauri::command]
-fn save_note_content(args: SaveContentArgs, state: State<AppState>) {
-    let db = state.db.lock().unwrap();
+fn save_note_content(args: SaveContentArgs, state: State<AppState>) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
     let final_content = if args.is_locked {
         crypto::encrypt(&args.content, &args.password)
     } else {
         args.content
     };
     let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    db::update_note_content(&db, &final_content, &now, args.id);
+    db::update_note_content(&db, &final_content, &now, args.id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn save_note_title(args: SaveTitleArgs, state: State<AppState>) {
-    let db = state.db.lock().unwrap();
+fn save_note_title(args: SaveTitleArgs, state: State<AppState>) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
     let final_title = if args.is_locked {
         crypto::encrypt(&args.title, &args.password)
     } else {
         args.title
     };
     let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    db::update_note_title(&db, &final_title, &now, args.id);
+    db::update_note_title(&db, &final_title, &now, args.id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn delete_note(id: i64, state: State<AppState>) {
-    let db = state.db.lock().unwrap();
-    db::delete_note(&db, id);
+fn delete_note(id: i64, state: State<AppState>) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db::delete_note(&db, id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -212,16 +208,6 @@ fn save_settings(s: settings::Settings) {
     settings::save_settings(&s);
 }
 
-// Helper so get_note can reuse db::load_notes cleanly
-trait LoadNotesExt {
-    fn load_notes_into(&self, query: &str, password: &str) -> rusqlite::Result<Vec<Note>>;
-}
-impl LoadNotesExt for Connection {
-    fn load_notes_into(&self, query: &str, password: &str) -> rusqlite::Result<Vec<Note>> {
-        Ok(db::load_notes(self, query, password))
-    }
-}
-
 fn apply_windows_effects(handle: &tauri::AppHandle, dark: bool) {
     #[cfg(target_os = "windows")]
     {
@@ -243,7 +229,7 @@ fn apply_windows_effects(handle: &tauri::AppHandle, dark: bool) {
 pub fn run() {
     let db_path = db::get_db_path();
     let conn = Connection::open(&db_path).expect("Failed to open database");
-    db::init_db(&conn);
+    db::init_db(&conn).expect("Failed to initialize database");
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
