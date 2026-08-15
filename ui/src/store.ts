@@ -13,11 +13,19 @@ export interface AppState {
   showAbout: boolean;
   ctx: CtxMenu | null;
   theme: string;
+  font_family: string;
+  font_style: string;
   font_size: number;
   word_wrap: boolean;
   formatting_enabled: boolean;
   restore_tabs: boolean;
+  open_files_mode: string;
+  recent_files: boolean;
+  spell_check: boolean;
+  autocorrect: boolean;
+  writing_tools: boolean;
   dragIndex: number | null;
+  settingsOpen: boolean;
 }
 
 export const [state, setState] = createStore<AppState>({
@@ -30,11 +38,19 @@ export const [state, setState] = createStore<AppState>({
   showAbout: false,
   ctx: null,
   theme: "light",
+  font_family: "Space Mono",
+  font_style: "Regular",
   font_size: 14,
   word_wrap: true,
   formatting_enabled: false,
   restore_tabs: true,
+  open_files_mode: "new",
+  recent_files: true,
+  spell_check: true,
+  autocorrect: true,
+  writing_tools: true,
   dragIndex: null,
+  settingsOpen: false,
 });
 
 // ---------- Settings ----------
@@ -42,10 +58,17 @@ export async function loadSettings(): Promise<Settings> {
   try {
     const s = (await invoke("get_settings")) as Settings;
     setState("theme", s.theme || "light");
+    setState("font_family", s.font_family || "Space Mono");
+    setState("font_style", s.font_style || "Regular");
     setState("font_size", s.font_size || 14);
     setState("word_wrap", s.word_wrap !== false);
     setState("formatting_enabled", !!s.formatting_enabled);
     setState("restore_tabs", s.restore_tabs !== false);
+    setState("open_files_mode", s.open_files_mode || "new");
+    setState("recent_files", s.recent_files !== false);
+    setState("spell_check", s.spell_check !== false);
+    setState("autocorrect", s.autocorrect !== false);
+    setState("writing_tools", s.writing_tools !== false);
     return s;
   } catch {
     return {};
@@ -57,10 +80,17 @@ export function saveSettings() {
     s: {
       theme: state.theme,
       open_tab_ids: state.tabs.map(t => t.note_id).filter(id => id !== -1),
+      font_family: state.font_family,
+      font_style: state.font_style,
       font_size: state.font_size,
       word_wrap: state.word_wrap,
       formatting_enabled: state.formatting_enabled,
       restore_tabs: state.restore_tabs,
+      open_files_mode: state.open_files_mode,
+      recent_files: state.recent_files,
+      spell_check: state.spell_check,
+      autocorrect: state.autocorrect,
+      writing_tools: state.writing_tools,
     },
   });
 }
@@ -97,15 +127,12 @@ export function closeTab(idx: number) {
 }
 
 export function openSettings() {
-  const idx = state.tabs.findIndex(t => t.note_id === -1);
-  if (idx === -1) {
-    const len = state.tabs.length;
-    setState("tabs", t => [...t, { note_id: -1, title: "⚙  Ayarlar", content: "", is_locked: false }]);
-    setState("activeTab", len);
-  } else {
-    setState("activeTab", idx);
-  }
+  setState("settingsOpen", true);
   hideMenus();
+}
+
+export function closeSettings() {
+  setState("settingsOpen", false);
 }
 
 export async function deleteNoteFromList(noteId: number) {
@@ -138,10 +165,10 @@ export function hideMenus() {
   setState("searchOpen", false);
 }
 
-export function toggleAppMenu() {
-  setState("showAppMenu", !state.showAppMenu);
-  setState("ctx", null);
-}
+// export function toggleAppMenu() {
+//   setState("showAppMenu", !state.showAppMenu);
+//   setState("ctx", null);
+// }
 
 export function toggleSearch() {
   setState("searchOpen", !state.searchOpen);

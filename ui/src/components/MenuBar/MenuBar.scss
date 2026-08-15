@@ -1,14 +1,12 @@
 // ---------- MenuBar (Dosya / Düzenle / Görünüm) ----------
 .menu-row {
   position: relative;
-  height: 31px;
-  flex: 0 0 31px;
+  height: 100%;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 1px;
   padding: 0 6px;
-  background: var(--glass);
-  border-bottom: 1px solid var(--separator);
   flex-shrink: 0;
 }
 

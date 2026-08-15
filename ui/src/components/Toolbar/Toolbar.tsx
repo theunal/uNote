@@ -1,14 +1,39 @@
-import { createSignal } from "solid-js";
+import { createSignal, onMount } from "solid-js";
 import { saveSettings, setState, state } from "../../store";
 import { svgAlignCenter, svgAlignLeft, svgAlignRight, svgList } from "../../svg";
+import { invoke } from "../../tauri";
+import { SelectBox } from "../SelectBox/SelectBox";
 import "./Toolbar.scss";
 
 const editorEl = () => document.getElementById("note-editor") as HTMLTextAreaElement | null;
 
+const DEFAULT_FONTS = ["Space Mono", "DM Sans", "Georgia"];
+const SIZES = ["12", "13", "14", "16", "18"];
+
 export function Toolbar() {
-  const [font, setFont] = createSignal("Space Mono");
+  const [font, setFont] = createSignal(state.font_family);
   const [size, setSize] = createSignal(state.font_size);
   const [active, setActive] = createSignal<Record<string, boolean>>({});
+  const [fonts, setFonts] = createSignal<string[]>(DEFAULT_FONTS);
+
+  onMount(async () => {
+    try {
+      const all = (await invoke("list_fonts")) as string[];
+      if (all && all.length) {
+        const merged = [...DEFAULT_FONTS];
+        for (const f of all) {
+          if (!merged.includes(f)) merged.push(f);
+        }
+        setFonts(merged);
+      }
+    } catch (err) {
+      console.warn("[unote] font listesi yüklenemedi", err);
+    }
+    const el = editorEl();
+    if (el && state.font_family) {
+      el.style.fontFamily = `"${state.font_family}", sans-serif`;
+    }
+  });
 
   const toggleCmd = (cmd: string) => {
     const el = editorEl();
@@ -36,13 +61,11 @@ export function Toolbar() {
 
   const onFontChange = (value: string) => {
     setFont(value);
+    setState("font_family", value);
+    saveSettings();
     const el = editorEl();
     if (!el) return;
-    el.style.fontFamily = value === "DM Sans"
-      ? '"DM Sans", sans-serif'
-      : value === "Georgia"
-        ? "Georgia, serif"
-        : '"Space Mono", monospace';
+    el.style.fontFamily = `"${value}", sans-serif`;
     el.focus();
   };
 
@@ -55,19 +78,11 @@ export function Toolbar() {
   return (
     <section class="toolbar" aria-label="Biçim araçları">
       <label for="font-picker" class="sr-only">Yazı tipi</label>
-      <select class="font-picker" id="font-picker" value={font()} onChange={(e) => onFontChange((e.target as HTMLSelectElement).value)}>
-        <option>Space Mono</option>
-        <option>DM Sans</option>
-        <option>Georgia</option>
-      </select>
+      <SelectBox id="font-picker" value={font()} options={fonts()} compact searchable minWidth="108px"
+        ariaLabel="Yazı tipi" onChange={onFontChange} />
       <label for="size-picker" class="sr-only">Yazı boyutu</label>
-      <select class="size-picker" id="size-picker" value={String(size())} onChange={(e) => onSizeChange(+(e.target as HTMLSelectElement).value)}>
-        <option value="12">12</option>
-        <option value="13">13</option>
-        <option value="14">14</option>
-        <option value="16">16</option>
-        <option value="18">18</option>
-      </select>
+      <SelectBox id="size-picker" value={String(size())} options={SIZES} compact searchable minWidth="47px"
+        ariaLabel="Yazı boyutu" onChange={(v) => onSizeChange(+v)} />
       <span class="toolbar-divider" aria-hidden="true"></span>
       <button class={"tool-button text-tool bold" + (active().bold ? " active" : "")} type="button" data-command="bold" aria-label="Kalın" onClick={() => toggleCmd("bold")}><strong>B</strong></button>
       <button class={"tool-button text-tool italic" + (active().italic ? " active" : "")} type="button" data-command="italic" aria-label="İtalik" onClick={() => toggleCmd("italic")}>I</button>

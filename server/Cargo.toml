@@ -27,4 +27,5 @@ window-vibrancy = "0.8"
 windows = { version = "0.62.2", features = [
     "Win32_Foundation",
     "Win32_Graphics_Dwm",
+    "Win32_Graphics_DirectWrite",
 ] }

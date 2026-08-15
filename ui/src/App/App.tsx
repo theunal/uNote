@@ -1,6 +1,7 @@
-import { createEffect, onMount } from "solid-js";
-import { state, setState, refreshNotes, openTab, hideMenus } from "../store";
+import { createEffect, onMount, Show } from "solid-js";
+import { state, setState, refreshNotes, openTab, hideMenus, closeSettings, openSettings } from "../store";
 import { loadSettings } from "../store";
+import { svgGear } from "../svg";
 import "./App.scss";
 import { TitleBar } from "../components/TitleBar/TitleBar";
 import { MenuBar } from "../components/MenuBar/MenuBar";
@@ -8,6 +9,7 @@ import { Toolbar } from "../components/Toolbar/Toolbar";
 import { Main } from "../components/Main/Main";
 import { StatusBar } from "../components/StatusBar/StatusBar";
 import { Overlays } from "../components/Overlays/Overlays";
+import { Settings } from "../components/Settings/Settings";
 
 function applyTheme() {
   const dark = state.theme === "dark"
@@ -47,7 +49,7 @@ export function App() {
     if (!(e.target as Element).closest(".search-note")) hideMenus();
   };
   const onWinKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Escape") { hideMenus(); }
+    if (e.key === "Escape") { if (state.settingsOpen) closeSettings(); else hideMenus(); }
   };
   const onWinMouseUp = () => setState("dragIndex", null);
 
@@ -58,12 +60,23 @@ export function App() {
       onKeyDown={onWinKeyDown}
       onMouseUp={onWinMouseUp}
     >
-      <TitleBar />
-      <MenuBar />
-      <Toolbar />
-      <Main />
-      <StatusBar />
-      <Overlays />
+      <Show when={state.settingsOpen} fallback={
+        <>
+          <TitleBar />
+          <div class="editbar">
+            <MenuBar />
+            <Toolbar />
+            <button class="editbar-settings" type="button"  aria-label="Ayarlar" onClick={() => openSettings()}>
+              <span innerHTML={svgGear()} />
+            </button>
+          </div>
+          <Main />
+          <StatusBar />
+          <Overlays />
+        </>
+      }>
+        <Settings />
+      </Show>
     </div>
   );
 }

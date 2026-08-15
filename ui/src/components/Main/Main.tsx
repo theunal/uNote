@@ -1,8 +1,7 @@
 import { Show } from "solid-js";
-import { state,  } from "../../store";
+import { state, } from "../../store";
 import "./Main.scss";
 import { Editor } from "../Editor/Editor";
-import Settings from "../Settings/Settings";
 
 export function Main() {
   const activeNoteId = () => {
@@ -13,20 +12,16 @@ export function Main() {
 
   return (
     <main class="main" id="mainView">
-      <Show when={state.activeTab === -1} fallback={
-        <Show when={activeNoteId()} keyed fallback={<div class="hero-empty">
-          <div class="logo">
-            uNote
-          </div>
-          <p>
-            Bir not seçin veya yeni bir not oluşturun
-          </p>
+      <Show when={activeNoteId()} keyed fallback={<div class="hero-empty">
+        <div class="logo">
+          uNote
         </div>
-        }>
-          {(id) => <Editor noteId={id} />}
-        </Show>
+        <p>
+          Bir not seçin veya yeni bir not oluşturun
+        </p>
+      </div>
       }>
-        <Settings />
+        {(id) => <Editor noteId={id} />}
       </Show>
     </main>
   );

@@ -1,0 +1,220 @@
+// ---------- SelectBox (searchable / menu select) ----------
+.selectbox {
+  position: relative;
+  width: 100%;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  color: var(--text);
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  outline: none;
+
+  &:hover {
+    border-color: var(--border);
+    background: var(--surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &.open {
+    border-color: var(--accent);
+    box-shadow: var(--ring);
+    background: var(--surface-hover);
+  }
+
+  &.compact {
+    height: 23px;
+    border-radius: 3px;
+  }
+}
+
+.selectbox-trigger {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px 0 9px;
+}
+
+.selectbox-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.selectbox-chev {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  border-radius: 3px;
+  transition: transform .18s var(--ease), background .15s ease;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+
+  .selectbox.open & {
+    transform: rotate(180deg);
+  }
+}
+
+// ----- Dropdown menu -----
+.selectbox-menu {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-pop);
+  padding: 5px;
+  overflow: hidden;
+  animation: sb-pop .14s var(--ease);
+}
+
+@keyframes sb-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.selectbox-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px;
+  margin-bottom: 4px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+
+  &:focus-within {
+    border-color: var(--accent);
+    box-shadow: var(--ring);
+  }
+}
+
+.selectbox-search-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--text-secondary);
+  opacity: .8;
+
+  svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+.selectbox-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 0;
+
+  &::placeholder {
+    color: var(--text-secondary);
+  }
+}
+
+.selectbox-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.selectbox-option {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+  transition: background .12s ease;
+
+  &:hover,
+  &.highlighted {
+    background: var(--surface-hover);
+  }
+
+  &.selected {
+    background: var(--accent-soft);
+
+    .selectbox-option-label {
+      font-weight: 600;
+    }
+  }
+
+  &.compact {
+    min-height: 25px;
+  }
+}
+
+// Selected marker: 1px accent bar on the left of the selected row
+.selectbox-mark {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 16px;
+  margin: 0 9px 0 0;
+  background: transparent;
+  border-radius: 1px;
+  transition: background .12s ease;
+
+  .selectbox-option.selected & {
+    background: var(--accent);
+  }
+}
+
+.selectbox-option-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selectbox-empty {
+  padding: 14px 10px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}

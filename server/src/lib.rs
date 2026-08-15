@@ -129,6 +129,80 @@ fn delete_note(id: i64, state: State<AppState>) {
 }
 
 #[tauri::command]
+fn list_fonts() -> Vec<String> {
+    #[cfg(target_os = "windows")]
+    {
+        use windows::Win32::Graphics::DirectWrite::{
+            DWRITE_FACTORY_TYPE_SHARED, DWriteCreateFactory, IDWriteFactory,
+        };
+
+        let factory: IDWriteFactory =
+            match unsafe { DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED) } {
+                Ok(f) => f,
+                Err(_) => return Vec::new(),
+            };
+        let mut collection: Option<windows::Win32::Graphics::DirectWrite::IDWriteFontCollection> =
+            None;
+        if unsafe { factory.GetSystemFontCollection(&mut collection, true) }.is_err() {
+            return Vec::new();
+        }
+        let Some(collection) = collection else {
+            return Vec::new();
+        };
+
+        let mut fonts = Vec::new();
+        let count = unsafe { collection.GetFontFamilyCount() };
+        for i in 0..count {
+            let family = match unsafe { collection.GetFontFamily(i) } {
+                Ok(f) => f,
+                Err(_) => continue,
+            };
+            let names = match unsafe { family.GetFamilyNames() } {
+                Ok(n) => n,
+                Err(_) => continue,
+            };
+            // Prefer English name, fall back to first locale
+            let mut index: u32 = 0;
+            let mut exists: windows::core::BOOL = false.into();
+            unsafe {
+                let en = windows::core::PCWSTR(windows::core::w!("en-us").as_ptr());
+                let _ = names.FindLocaleName(en, &mut index, &mut exists);
+                if !bool::from(exists) {
+                    index = 0;
+                }
+            }
+            let len = match unsafe { names.GetStringLength(index) } {
+                Ok(l) => l,
+                Err(_) => continue,
+            };
+            if len == 0 {
+                continue;
+            }
+            let mut buf = vec![0u16; len as usize + 1];
+            unsafe {
+                let _ = names.GetString(index, &mut buf);
+            }
+            let name = String::from_utf16_lossy(&buf[..len as usize]);
+            if !name.trim().is_empty() && !fonts.contains(&name) {
+                fonts.push(name);
+            }
+        }
+        fonts.sort();
+        fonts
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        vec![
+            "Arial".into(),
+            "Calibri".into(),
+            "Courier New".into(),
+            "Georgia".into(),
+            "Segoe UI".into(),
+        ]
+    }
+}
+
+#[tauri::command]
 fn get_settings() -> settings::Settings {
     settings::load_settings()
 }
@@ -190,7 +264,8 @@ pub fn run() {
             save_note_title,
             delete_note,
             get_settings,
-            save_settings
+            save_settings,
+            list_fonts
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

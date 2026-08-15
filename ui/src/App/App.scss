@@ -10,3 +10,45 @@
   overflow: hidden;
   user-select: none;
 }
+
+// ---------- Merged MenuBar + Toolbar ----------
+.editbar {
+  height: 35px;
+  flex: 0 0 35px;
+  display: flex;
+  align-items: center;
+  background: var(--glass);
+  border-bottom: 1px solid var(--separator);
+  flex-shrink: 0;
+}
+
+.editbar-settings {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  margin-right: 4px;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+
+  span {
+    display: grid;
+    place-items: center;
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+}

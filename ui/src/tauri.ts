@@ -8,6 +8,7 @@ export const invoke = tauri
       if (_cmd === "list_notes") return [];
       if (_cmd === "get_settings") return {};
       if (_cmd === "create_note") return 1;
+      if (_cmd === "list_fonts") return ["Arial", "Calibri", "Courier New", "Georgia", "Segoe UI"];
       return undefined;
     };
 

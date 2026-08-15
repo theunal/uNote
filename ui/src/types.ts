@@ -15,10 +15,17 @@ export interface NoteTab {
 export interface Settings {
   theme?: string;
   open_tab_ids?: number[];
+  font_family?: string;
+  font_style?: string;
   font_size?: number;
   word_wrap?: boolean;
   formatting_enabled?: boolean;
   restore_tabs?: boolean;
+  open_files_mode?: string;
+  recent_files?: boolean;
+  spell_check?: boolean;
+  autocorrect?: boolean;
+  writing_tools?: boolean;
 }
 
 export interface CtxMenu {

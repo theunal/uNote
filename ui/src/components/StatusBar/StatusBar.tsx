@@ -13,7 +13,6 @@ function ThemeIndicator() {
 
 export function StatusBar() {
   const activeTitle = () => {
-    if (state.activeTab === -1) return "Ayarlar";
     if (state.activeTab !== null && state.tabs[state.activeTab]) return state.tabs[state.activeTab].title;
     return "Notlar";
   };

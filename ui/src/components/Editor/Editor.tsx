@@ -1,3 +1,4 @@
+import { onMount } from "solid-js";
 import { PASSWORD } from "../../constants";
 import { setState, state } from "../../store";
 import { svgX } from "../../svg";
@@ -7,6 +8,16 @@ import "./Editor.scss";
 export function Editor(props: { noteId: number }) {
     const tab = () => state.tabs.find(t => t.note_id === props.noteId);
     let debounce: number | undefined;
+
+    onMount(() => {
+        const el = document.getElementById("note-editor") as HTMLTextAreaElement | null;
+        if (!el) return;
+        const bold = state.font_style.includes("Bold");
+        const italic = state.font_style.includes("Italic");
+        el.style.fontFamily = `"${state.font_family}", sans-serif`;
+        el.style.fontWeight = bold ? "700" : "400";
+        el.style.fontStyle = italic ? "italic" : "normal";
+    });
 
     const onInput = (e: Event) => {
         const t = tab();
@@ -29,7 +40,7 @@ export function Editor(props: { noteId: number }) {
             <textarea
                 id="note-editor"
                 class="note-editor"
-                spellcheck={true}
+                spellcheck={state.spell_check}
                 aria-label="Not metni"
                 readonly={tab()?.is_locked}
                 style={{ "font-size": state.font_size + "px", "white-space": state.word_wrap ? "pre-wrap" : "pre" }}
