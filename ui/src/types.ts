@@ -31,5 +31,6 @@ export interface Settings {
 export interface CtxMenu {
   x: number;
   y: number;
-  note_id: number;
+  note_id?: number;
+  tab_index?: number;
 }

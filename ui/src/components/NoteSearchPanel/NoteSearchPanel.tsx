@@ -1,25 +1,14 @@
 import { For, Show } from "solid-js";
-import { notifyError, openContextMenu, openTab, refreshNotes, setState, state } from "../../store";
-import { AVATAR_COLORS, PASSWORD } from "../../constants";
+import { newTab, openContextMenu, openTab, refreshNotes, setState, state } from "../../store";
+import { AVATAR_COLORS } from "../../constants";
 import { svgLock, svgSearch } from "../../svg";
-import { invoke } from "../../tauri";
 import "./NoteSearchPanel.scss";
 import { Input } from "../Input/Input";
 
 let searchTimer: number | undefined;
 
 export function NoteSearchPanel() {
-  const onAdd = async () => {
-    if (state.searchQuery) setState("searchQuery", "");
-    try {
-      const id = (await invoke("create_note", { password: PASSWORD })) as number;
-      await refreshNotes();
-      const note = state.notes.find((x) => x.id === id);
-      if (note) openTab(note);
-    } catch (err) {
-      notifyError(err, "Not oluşturulamadı");
-    }
-  };
+  const onAdd = () => { void newTab(); };
 
   return (
     <div class={"search-panel" + (state.searchOpen ? " open" : "")} id="searchPanel">

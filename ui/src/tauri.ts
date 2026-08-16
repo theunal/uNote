@@ -7,7 +7,7 @@ export const invoke = tauri
       console.warn("[unote] invoke stub: running outside Tauri —", _cmd);
       if (_cmd === "list_notes") return [];
       if (_cmd === "get_settings") return {};
-      if (_cmd === "create_note") return 1;
+      if (_cmd === "create_note") return { id: 1, title: "Yeni Not", content: "", is_locked: false };
       if (_cmd === "list_fonts") return ["Arial", "Calibri", "Courier New", "Georgia", "Segoe UI"];
       return undefined;
     };

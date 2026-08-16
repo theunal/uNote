@@ -2,7 +2,7 @@
 $radius-s: 6px;
 $radius-m: 10px;
 $radius-window: 8px;
-$titlebar-h: 40px;
+$titlebar-h: 35px;
 $statusbar-h: 28px;
 
 $ease: cubic-bezier(.2, .7, .2, 1);
@@ -15,7 +15,7 @@ $themes: (
     surface: #FFFFFF,
     surface-hover: #f4f4f4,
     surface-pressed: #F0F0F0,
-    close-hover: #E8E8E8,
+    close-hover: #f9f9f9,
     accent: #0078D4,
     accent-strong: #106EBE,
     text: #1A1A1A,
@@ -33,7 +33,7 @@ $themes: (
     card: #FFFFFF,
     paper: #FFFFFF,
     border1: #e1e1e1,
-    titlebar: #f7f7f7
+    titlebar: #e3e2e2
   ),
 
   dark: (bg: #202020,
@@ -57,7 +57,8 @@ $themes: (
     canvas: #232323,
     card: #2B2B2B,
     paper: #272727,
-    border1: #424242
+    border1: #424242,
+    titlebar: rgb(62, 59, 59)
   ),
 );
 

@@ -6,7 +6,24 @@
   display: flex;
   align-items: stretch;
   background: var(--titlebar);
-  border-bottom: 1px solid var(--separator);
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(to right,
+      var(--separator) 0,
+      var(--separator) var(--active-l, 0px),
+      transparent var(--active-l, 0px),
+      transparent calc(var(--active-l, 0px) + var(--active-w, 0px)),
+      var(--separator) calc(var(--active-l, 0px) + var(--active-w, 0px)),
+      var(--separator) 100%);
+  }
 }
 
 .drag {
@@ -15,6 +32,8 @@
   align-items: stretch;
   overflow: hidden;
   min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .tabs-wrap {
@@ -27,25 +46,22 @@
 .tab-chevron {
   flex: 0 0 auto;
   align-self: center;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 100%;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 4px;
   background: transparent;
   color: var(--text-secondary);
-  // cursor: pointer;
-  border: 1px solid var(--border1);
 
   svg {
     width: 14px;
     height: 14px;
   }
 
-   &:hover {
+  &:hover {
     background: var(--close-hover);
     color: var(--text);
   }
@@ -56,49 +72,36 @@
     background: transparent;
     color: var(--text-secondary);
   }
-
-  &:first-child {
-    margin-left: 7px;
-  }
 }
 
 .tabs {
-  position: relative;
   display: flex;
   align-items: flex-end;
-  gap: 2px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
   scroll-behavior: smooth;
   min-width: 0;
-  flex: 0 1 auto;
-  padding: 6px 0 0 8px;
+  flex: 1 1 auto;
 
   &::-webkit-scrollbar {
     display: none;
   }
 }
 
-.tabs .tab.hidden {
-  visibility: hidden;
-}
-
 .add-tab {
   align-self: center;
-  margin: 0 0 0 5px;
 }
 
 .icon-btn {
   flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 100%;
   align-self: center;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 3px;
   color: var(--text-secondary);
   font-size: 16px;
 

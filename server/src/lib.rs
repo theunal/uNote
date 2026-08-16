@@ -75,13 +75,20 @@ fn list_notes(args: ListArgs, state: State<AppState>) -> Result<Vec<NoteDto>, St
 }
 
 #[tauri::command]
-fn create_note(_password: String, state: State<AppState>) -> Result<i64, String> {
+fn create_note(_password: String, state: State<AppState>) -> Result<NoteDto, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     db::insert_note(&db, "Yeni Not", "", false, &now).map_err(|e| e.to_string())?;
-    // Return last inserted id
-    db.query_row("SELECT last_insert_rowid()", [], |r| r.get(0))
-        .map_err(|e| e.to_string())
+    let id: i64 = db
+        .query_row("SELECT last_insert_rowid()", [], |r| r.get(0))
+        .map_err(|e| e.to_string())?;
+    Ok(NoteDto {
+        id,
+        title: "Yeni Not".into(),
+        content: String::new(),
+        is_locked: false,
+        updated_at: now,
+    })
 }
 
 #[tauri::command]

@@ -118,7 +118,12 @@ export function notifyError(err: unknown, fallback = "Bir hata oluştu") {
 // ---------- Data ----------
 export async function refreshNotes() {
   try {
-    const notes = (await invoke("list_notes", { args: { query: state.searchQuery, password: PASSWORD } })) as Note[];
+    const notes = (await invoke("list_notes", {
+      args: {
+        query: state.searchQuery,
+        password: PASSWORD
+      }
+    })) as Note[];
     setState("notes", notes);
   } catch (err) {
     notifyError(err, "Notlar yüklenemedi");
@@ -132,7 +137,12 @@ export function openTab(note: Note, select = true) {
   let idx = tabOf(note.id);
   if (idx === -1) {
     idx = state.tabs.length;
-    setState("tabs", t => [...t, { note_id: note.id, title: note.title, content: note.content, is_locked: note.is_locked }]);
+    setState("tabs", t => [...t, {
+      note_id: note.id,
+      title: note.title,
+      content: note.content,
+      is_locked: note.is_locked
+    }]);
   }
   if (select) setState("activeTab", idx);
   saveSettings();
@@ -142,14 +152,55 @@ export function closeTab(idx: number) {
   const tab = state.tabs[idx];
   const empty = !tab.content || !tab.content.trim();
   const next = state.tabs.filter((_, i) => i !== idx);
+  const activeTab = next.length ? Math.min(idx, next.length - 1) : null;
   setState("tabs", next);
-  setState("activeTab", next.length ? Math.min(idx, next.length - 1) : null);
+  setState("activeTab", activeTab);
   if (empty) {
     invoke("delete_note", { id: tab.note_id })
       .then(refreshNotes)
       .catch((err) => notifyError(err, "Not silinemedi"));
   }
   saveSettings();
+}
+
+export function closeOtherTabs(idx: number) {
+  const closing = state.tabs.filter((_, i) => i !== idx);
+  for (const t of closing) {
+    if (!t.content || !t.content.trim()) {
+      invoke("delete_note", { id: t.note_id })
+        .catch((err) => notifyError(err, "Not silinemedi"));
+    }
+  }
+  setState("tabs", [state.tabs[idx]]);
+  setState("activeTab", 0);
+  saveSettings();
+}
+
+export function closeTabsToRight(idx: number) {
+  const closing = state.tabs.slice(idx + 1);
+  const next = state.tabs.slice(0, idx + 1);
+  for (const t of closing) {
+    if (!t.content || !t.content.trim()) {
+      invoke("delete_note", { id: t.note_id })
+        .catch((err) => notifyError(err, "Not silinemedi"));
+    }
+  }
+  setState("tabs", next);
+  setState("activeTab", Math.min(state.activeTab ?? 0, idx));
+  saveSettings();
+}
+
+export async function newTab() {
+  if (state.searchQuery)
+    setState("searchQuery", "");
+
+  try {
+    const note = (await invoke("create_note", { password: PASSWORD })) as Note;
+    setState("notes", n => [note, ...n]);
+    openTab(note, state.activeTab === null);
+  } catch (err) {
+    notifyError(err, "Not oluşturulamadı");
+  }
 }
 
 export function openSettings() {
@@ -212,4 +263,9 @@ export function openSearch() {
 export function openContextMenu(x: number, y: number, noteId: number) {
   setState("showAppMenu", false);
   setState("ctx", { x, y, note_id: noteId });
+}
+
+export function openTabContextMenu(x: number, y: number, tabIndex: number) {
+  setState("showAppMenu", false);
+  setState("ctx", { x, y, tab_index: tabIndex });
 }

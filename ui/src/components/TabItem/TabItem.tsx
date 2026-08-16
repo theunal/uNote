@@ -1,6 +1,5 @@
-import { closeTab, saveSettings, setState, state } from "../../store";
+import { closeTab, openTabContextMenu, saveSettings, setState, state } from "../../store";
 import { svgLock } from "../../svg";
-import { trunc } from "../../util";
 import "./TabItem.scss";
 
 export function TabItem(props: {
@@ -41,9 +40,14 @@ export function TabItem(props: {
                 setState("dragIndex", i);
             }}
             onMouseEnter={reorder}
+            onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openTabContextMenu(e.clientX, e.clientY, i);
+            }}
         >
             {tab.is_locked ? <span class="lock" innerHTML={svgLock()} /> : null}
-            <span class="tab-title">{trunc(tab.title, 15)}</span>
+            <span class="tab-title">{tab.title}</span>
             <span class="tab-close" role="button" onClick={(e) => {
                 e.stopPropagation();
                 closeTab(i);

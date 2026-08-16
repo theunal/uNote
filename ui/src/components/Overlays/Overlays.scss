@@ -31,6 +31,11 @@
     color: var(--danger);
   }
 
+  &.disabled {
+    opacity: .45;
+    pointer-events: none;
+  }
+
   .mi-ico {
     width: 18px;
     text-align: center;

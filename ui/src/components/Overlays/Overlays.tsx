@@ -1,26 +1,74 @@
 import { Show } from "solid-js";
-import { state, setState, deleteNoteFromList, openSettings } from "../../store";
+import {
+  state, setState, deleteNoteFromList, closeOtherTabs, closeTabsToRight, newTab,
+  closeTab, openSettings
+} from "../../store";
 import { trunc } from "../../util";
 import { svgGear, svgInfo, svgTrash } from "../../svg";
 import "./Overlays.scss";
 
 export function Overlays() {
   const ctxNote = () => state.ctx ? state.notes.find(n => n.id === state.ctx!.note_id) : null;
+  const ctxTabIndex = () => state.ctx?.tab_index;
+
+  const newNote = () => {
+    setState("ctx", null);
+    newTab();
+  };
+
+  const closeOtherTabsHandler = () => {
+    setState("ctx", null);
+    closeOtherTabs(ctxTabIndex()!);
+  }
+
+  const closeTabsToRightHandler = () => {
+    setState("ctx", null);
+    closeTabsToRight(ctxTabIndex()!);
+  }
 
   return (
     <>
       <Show when={state.showAppMenu}>
         <div class="menu" id="appMenu" style={{ left: "60px", top: "44px" }}>
-          <div class="menu-item" onClick={() => openSettings()}><span class="mi-ico" innerHTML={svgGear()} /> Ayarlar</div>
-          <div class="menu-item" onClick={() => setState("showAbout", true)}><span class="mi-ico" innerHTML={svgInfo()} /> Hakkında</div>
+          <div class="menu-item" onClick={() => openSettings()}>
+            <span class="mi-ico" innerHTML={svgGear()} />
+            Ayarlar
+          </div>
+          <div class="menu-item" onClick={() => setState("showAbout", true)}>
+            <span class="mi-ico" innerHTML={svgInfo()} />
+            Hakkında
+          </div>
         </div>
       </Show>
 
-      <Show when={state.ctx}>
+      <Show when={ctxTabIndex() !== undefined}>
+        <div class="menu" id="ctxMenu" style={{
+          left: state.ctx!.x + "px",
+          top: state.ctx!.y + "px"
+        }}>
+          <div class="menu-item" onClick={newNote}>
+            Yeni not
+          </div>
+          <div class="menu-sep"></div>
+          <div class={"menu-item" + (state.tabs.length <= 1 ? " disabled" : "")}
+            onClick={closeOtherTabsHandler}>
+            Diğerlerini kapat
+          </div>
+          <div class={"menu-item" + (ctxTabIndex()! >= state.tabs.length - 1 ? " disabled" : "")}
+            onClick={closeTabsToRightHandler}>
+            Sağdakileri kapat
+          </div>
+        </div>
+      </Show>
+
+      <Show when={state.ctx && ctxTabIndex() === undefined}>
         <div class="menu" id="ctxMenu" style={{ left: state.ctx!.x + "px", top: state.ctx!.y + "px" }}>
           <div class="menu-head">{trunc(ctxNote()?.title || "", 20)}</div>
           <div class="menu-sep"></div>
-          <div class="menu-item danger" onClick={() => deleteNoteFromList(state.ctx!.note_id)}><span class="mi-ico" innerHTML={svgTrash()} /> Notu Sil</div>
+          <div class="menu-item danger" onClick={() => deleteNoteFromList(state.ctx!.note_id!)}>
+            <span class="mi-ico" innerHTML={svgTrash()} />
+            Notu Sil
+          </div>
         </div>
       </Show>
 

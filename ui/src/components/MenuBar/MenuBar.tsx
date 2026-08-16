@@ -1,6 +1,6 @@
 import { Show, createSignal, onCleanup, onMount } from "solid-js";
 import { PASSWORD } from "../../constants";
-import { notifyError, refreshNotes, saveSettings, setState, state, openSearch, openTab } from "../../store";
+import { notifyError, newTab, saveSettings, setState, state, openSearch } from "../../store";
 import { invoke } from "../../tauri";
 import "./MenuBar.scss";
 
@@ -16,15 +16,7 @@ export function MenuBar() {
   });
 
   const onNew = async () => {
-    if (state.searchQuery) setState("searchQuery", "");
-    try {
-      const id = (await invoke("create_note", { password: PASSWORD })) as number;
-      await refreshNotes();
-      const note = state.notes.find((x) => x.id === id);
-      if (note) openTab(note);
-    } catch (err) {
-      notifyError(err, "Not oluşturulamadı");
-    }
+    await newTab();
     closeMenus();
   };
 
