@@ -11,23 +11,53 @@ $font-mono: "Cascadia Code", "Consolas", monospace;
 
 // Theme tokens
 $themes: (
-  light: (bg: #F3F3F3, surface: #FFFFFF, surface-hover: #f4f4f4, surface-pressed: #F0F0F0,
+  light: (bg: #F3F3F3,
+    surface: #FFFFFF,
+    surface-hover: #f4f4f4,
+    surface-pressed: #F0F0F0,
     close-hover: #E8E8E8,
-    accent: #0078D4, accent-strong: #106EBE, text: #1A1A1A, text-secondary: #616161,
-    border: #edebeb, separator: #E6E6E6, danger: #C83232,
-    accent-soft: rgba(0, 120, 212, .12), accent-border: rgba(0, 120, 212, .5),
+    accent: #0078D4,
+    accent-strong: #106EBE,
+    text: #1A1A1A,
+    text-secondary: #616161,
+    border: #edebeb,
+    separator: #E6E6E6,
+    danger: #C83232,
+    accent-soft: rgba(0, 120, 212, .12),
+    accent-border: rgba(0, 120, 212, .5),
     danger-soft: rgba(200, 50, 50, .14),
-    glass: rgba(255, 255, 255, .8), glass-strong: rgba(255, 255, 255, .92),
-    frame-bg: #E6E6E6, canvas: #F0F0F0, card: #FFFFFF, paper: #FFFFFF,
+    glass: rgba(255, 255, 255, .8),
+    glass-strong: rgba(255, 255, 255, .92),
+    frame-bg: #E6E6E6,
+    canvas: #F0F0F0,
+    card: #FFFFFF,
+    paper: #FFFFFF,
+    border1: #e1e1e1,
+    titlebar: #f7f7f7
   ),
-  dark: (bg: #202020, surface: #2D2D2D, surface-hover: #383838, surface-pressed: #444444,
+
+  dark: (bg: #202020,
+    surface: #2D2D2D,
+    surface-hover: #383838,
+    surface-pressed: #444444,
     close-hover: #4C4C4C,
-    accent: #60CDFF, accent-strong: #4CC2FF, text: #FFFFFF, text-secondary: #9E9E9E,
-    border: #404040, separator: #373737, danger: #FF6464,
-    accent-soft: rgba(96, 205, 255, .14), accent-border: rgba(96, 205, 255, .55),
+    accent: #60CDFF,
+    accent-strong: #4CC2FF,
+    text: #FFFFFF,
+    text-secondary: #9E9E9E,
+    border: #404040,
+    separator: #373737,
+    danger: #FF6464,
+    accent-soft: rgba(96, 205, 255, .14),
+    accent-border: rgba(96, 205, 255, .55),
     danger-soft: rgba(255, 100, 100, .16),
-    glass: rgba(45, 45, 45, .78), glass-strong: rgba(50, 50, 50, .94),
-    frame-bg: #1E1E1E, canvas: #232323, card: #2B2B2B, paper: #272727,
+    glass: rgba(45, 45, 45, .78),
+    glass-strong: rgba(50, 50, 50, .94),
+    frame-bg: #1E1E1E,
+    canvas: #232323,
+    card: #2B2B2B,
+    paper: #272727,
+    border1: #424242
   ),
 );
 
@@ -46,9 +76,12 @@ $themes: (
   --ease: #{$ease};
 }
 
-@each $theme, $tokens in $themes {
+@each $theme,
+$tokens in $themes {
   html[data-theme="#{$theme}"] {
-    @each $name, $value in $tokens {
+
+    @each $name,
+    $value in $tokens {
       --#{$name}: #{$value};
     }
   }

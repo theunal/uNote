@@ -1,9 +1,10 @@
-import { For, } from "solid-js";
+import { createEffect, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import {
   state, setState, refreshNotes, openTab, notifyError,
 } from "../../store";
 import { invoke, appWindow } from "../../tauri";
 import { PASSWORD } from "../../constants";
+import { svgChevronLeft, svgChevronRight } from "../../svg";
 import "./TitleBar.scss";
 import { TabItem } from "../TabItem/TabItem";
 import { SearchBox } from "../SearchBox/SearchBox";
@@ -11,6 +12,50 @@ import { NoteSearchPanel } from "../NoteSearchPanel/NoteSearchPanel";
 import { WindowControls } from "../WindowControls/WindowControls";
 
 export function TitleBar() {
+  let tabsScroller: HTMLDivElement | undefined;
+  const [hasOverflow, setHasOverflow] = createSignal(false);
+  const [canScrollLeft, setCanScrollLeft] = createSignal(false);
+  const [canScrollRight, setCanScrollRight] = createSignal(false);
+
+  const updateTabVisibility = () => {
+    const el = tabsScroller;
+    if (!el) return;
+    const viewRight = el.scrollLeft + el.clientWidth;
+    for (const tab of el.querySelectorAll<HTMLElement>(".tab")) {
+      const right = tab.offsetLeft + tab.offsetWidth;
+      tab.classList.toggle("hidden", right > viewRight + 1);
+    }
+  };
+
+  const updateScrollArrows = () => {
+    const el = tabsScroller;
+    if (!el) return;
+    setHasOverflow(el.scrollWidth > el.clientWidth + 1);
+    setCanScrollLeft(el.scrollLeft > 1);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    updateTabVisibility();
+  };
+
+  createEffect(() => {
+    state.tabs.length;
+    requestAnimationFrame(updateScrollArrows);
+  });
+
+  onMount(() => {
+    const el = tabsScroller;
+    if (!el) return;
+    const ro = new ResizeObserver(() => requestAnimationFrame(updateScrollArrows));
+    ro.observe(el);
+    onCleanup(() => ro.disconnect());
+  });
+
+  const scrollTabs = (dir: number) => {
+    const el = tabsScroller;
+    if (!el) return;
+
+    el.scrollBy({ left: dir * 240, behavior: "smooth" });
+  };
+
   const onAdd = async () => {
     if (state.searchQuery) setState("searchQuery", "");
     try {
@@ -21,10 +66,12 @@ export function TitleBar() {
     } catch (err) {
       notifyError(err, "Not oluşturulamadı");
     }
+
+    scrollTabs(100);
   };
 
   const isInteractive = (t: Element) => t.closest(".tab") || t.closest(".icon-btn") ||
-    t.closest(".wc-btn") || t.closest(".searchbox") || t.closest("input");
+    t.closest(".wc-btn") || t.closest(".searchbox") || t.closest(".tab-chevron") || t.closest("input");
 
   const toggleMaximize = async () => {
     const isMaximized = await appWindow.isMaximized();
@@ -47,16 +94,24 @@ export function TitleBar() {
   return (
     <div class="titlebar" onMouseDown={onDragDown}>
       <div class="drag">
-        {
-          state.tabs?.length > 0 && (
-            <div class="tabs" id="tabs">
-              <For each={state.tabs}>{(tab, i) => <TabItem tab={tab} index={i()} />}</For>
-            </div>
-          )
-        }
-        <div class="icon-btn ml-1" id="btnAdd" onClick={onAdd}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="svg_icon">
-            <path d="M352 128C352 110.3 337.7 96 320 96C302.3 96 288 110.3 288 128L288 288L128 288C110.3 288 96 302.3 96 320C96 337.7 110.3 352 128 352L288 352L288 512C288 529.7 302.3 544 320 544C337.7 544 352 529.7 352 512L352 352L512 352C529.7 352 544 337.7 544 320C544 302.3 529.7 288 512 288L352 288L352 128z" /></svg>
+        <div class="tabs-wrap">
+          <Show when={hasOverflow()}>
+            <button class="tab-chevron" type="button" disabled={!canScrollLeft()}
+              aria-label="Sekmeleri sola kaydır" onClick={() => scrollTabs(-1)}
+              innerHTML={svgChevronLeft()} />
+          </Show>
+          <div class="tabs" id="tabs" ref={tabsScroller} onScroll={updateScrollArrows}>
+            <For each={state.tabs}>{(tab, i) => <TabItem tab={tab} index={i()} />}</For>
+          </div>
+          <Show when={hasOverflow()}>
+            <button class="tab-chevron" type="button" disabled={!canScrollRight()}
+              aria-label="Sekmeleri sağa kaydır" onClick={() => scrollTabs(1)}
+              innerHTML={svgChevronRight()} />
+          </Show>
+          <div class="icon-btn add-tab" id="btnAdd" onClick={onAdd}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="svg_icon">
+              <path d="M352 128C352 110.3 337.7 96 320 96C302.3 96 288 110.3 288 128L288 288L128 288C110.3 288 96 302.3 96 320C96 337.7 110.3 352 128 352L288 352L288 512C288 529.7 302.3 544 320 544C337.7 544 352 529.7 352 512L352 352L512 352C529.7 352 544 337.7 544 320C544 302.3 529.7 288 512 288L352 288L352 128z" /></svg>
+          </div>
         </div>
         {/* <div class="icon-btn" id="btnMenu" title="Menü" onClick={(e) => {
           e.stopPropagation();
