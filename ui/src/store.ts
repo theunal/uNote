@@ -152,9 +152,18 @@ export function closeTab(idx: number) {
   const tab = state.tabs[idx];
   const empty = !tab.content || !tab.content.trim();
   const next = state.tabs.filter((_, i) => i !== idx);
-  const activeTab = next.length ? Math.min(idx, next.length - 1) : null;
+  let newActive: number | null;
+  if (state.activeTab === null) {
+    newActive = null;
+  } else if (idx < state.activeTab) {
+    newActive = state.activeTab - 1;
+  } else if (idx === state.activeTab) {
+    newActive = next.length ? Math.min(idx, next.length - 1) : null;
+  } else {
+    newActive = state.activeTab;
+  }
   setState("tabs", next);
-  setState("activeTab", activeTab);
+  setState("activeTab", newActive);
   if (empty) {
     invoke("delete_note", { id: tab.note_id })
       .then(refreshNotes)

@@ -23,7 +23,6 @@ export function Overlays() {
   }
 
   const closeTabHandler = () => {
-    console.log("Closing tab from overlay", ctxTabIndex());
     closeTab(ctxTabIndex()!);
     setState("ctx", null);
   }

@@ -15,6 +15,10 @@ export function TitleBar() {
   const [canScrollLeft, setCanScrollLeft] = createSignal(false);
   const [canScrollRight, setCanScrollRight] = createSignal(false);
 
+  const MAX_VISIBLE_TABS = 15;
+  const MIN_TAB_W = 90;
+  const TAB_GAP = 2;
+
   const layoutTabs = () => {
     const el = tabsScroller;
     if (!el) return;
@@ -22,9 +26,9 @@ export function TitleBar() {
     if (n === 0) return;
     const available = el.clientWidth;
     if (available <= 0) return;
-    const gap = 2;
-    const visible = Math.min(10, n);
-    let w = (available - gap * (visible - 1)) / visible;
+    const fits = Math.floor((available + TAB_GAP) / (MIN_TAB_W + TAB_GAP));
+    const visible = Math.max(1, Math.min(MAX_VISIBLE_TABS, n, fits));
+    let w = Math.floor((available - TAB_GAP * (visible - 1)) / visible);
     if (w > 200) w = 200;
     if (w < 1) w = 1;
     el.style.setProperty("--tab-w", w + "px");
@@ -103,7 +107,7 @@ export function TitleBar() {
   };
 
   const onDragDown = (e: MouseEvent) => {
-    if (e.button !== 0 || isInteractive(e.target as Element)) return;
+    if (state.ctx || e.button !== 0 || isInteractive(e.target as Element)) return;
     if (e.detail === 2) {
       e.preventDefault();
       void toggleMaximize();
@@ -126,7 +130,8 @@ export function TitleBar() {
               </svg>
             </button>
           </Show>
-          <div class="tabs" id="tabs" ref={tabsScroller} onScroll={updateScrollArrows}>
+          <div class="tabs" id="tabs" ref={tabsScroller} onScroll={updateScrollArrows}
+            classList={{ "ctx-open": !!state.ctx }}>
             {state.tabs.map((tab, i) =>
               <TabItem tab={tab} index={i} />
             )}

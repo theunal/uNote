@@ -87,6 +87,10 @@
   &::-webkit-scrollbar {
     display: none;
   }
+
+  &.ctx-open {
+    pointer-events: none;
+  }
 }
 
 .add-tab {
