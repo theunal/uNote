@@ -13,13 +13,13 @@ export function Overlays() {
   const ctxTabIndex = () => state.ctx?.tab_index;
 
   const closeOtherTabsHandler = () => {
-    setState("ctx", null);
     closeOtherTabs(ctxTabIndex()!);
+    setState("ctx", null);
   }
 
   const closeTabsToRightHandler = () => {
-    setState("ctx", null);
     closeTabsToRight(ctxTabIndex()!);
+    setState("ctx", null);
   }
 
   const closeTabHandler = () => {
