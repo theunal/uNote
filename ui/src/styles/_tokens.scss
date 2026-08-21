@@ -34,9 +34,7 @@ $themes: (
     paper: #FFFFFF,
     border1: #e1e1e1,
     titlebar: #dddddd,
-    tab-hover: #ededed
-  ),
-
+    tab-hover: #ededed),
   dark: (bg: #202020,
     surface: #2D2D2D,
     surface-hover: #383838,
@@ -59,8 +57,8 @@ $themes: (
     card: #2B2B2B,
     paper: #272727,
     border1: #424242,
-    titlebar: rgb(62, 59, 59)
-  ),
+    titlebar: rgb(62, 59, 59),
+    tab-hover: #474545),
 );
 
 :root {

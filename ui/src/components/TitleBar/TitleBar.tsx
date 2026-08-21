@@ -67,22 +67,33 @@ export function TitleBar() {
     el.scrollLeft = el.scrollWidth - el.clientWidth;
   };
 
+  const scrollActiveIntoView = () => {
+    const el = tabsScroller;
+    if (!el) return;
+    el.querySelector<HTMLElement>(".tab.active")?.scrollIntoView({
+      inline: "nearest",
+      block: "nearest",
+      behavior: "smooth",
+    });
+  };
+
+  let prevTabCount = -1;
+
   createEffect(() => {
-    state.tabs.length;
+    const count = state.tabs.length;
     state.activeTab;
     requestAnimationFrame(() => {
       updateScrollArrows();
-      keepEndInView();
+      if (count > prevTabCount && prevTabCount >= 0) keepEndInView();
+      else scrollActiveIntoView();
+      prevTabCount = count;
     });
   });
 
   onMount(() => {
     const el = tabsScroller;
     if (!el) return;
-    const ro = new ResizeObserver(() => requestAnimationFrame(() => {
-      updateScrollArrows();
-      keepEndInView();
-    }));
+    const ro = new ResizeObserver(() => requestAnimationFrame(updateScrollArrows));
     ro.observe(el);
     onCleanup(() => ro.disconnect());
   });
