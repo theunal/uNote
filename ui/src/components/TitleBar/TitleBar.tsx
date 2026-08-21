@@ -22,16 +22,26 @@ export function TitleBar() {
   const layoutTabs = () => {
     const el = tabsScroller;
     if (!el) return;
-    const n = el.querySelectorAll(".tab").length;
+    const tabs = el.querySelectorAll<HTMLElement>(".tab");
+    const n = tabs.length;
     if (n === 0) return;
     const available = el.clientWidth;
     if (available <= 0) return;
-    const fits = Math.floor((available + TAB_GAP) / (MIN_TAB_W + TAB_GAP));
+    const fits = Math.max(1, Math.floor((available + TAB_GAP) / (MIN_TAB_W + TAB_GAP)));
+    const overflowing = n > fits;
     const visible = Math.max(1, Math.min(MAX_VISIBLE_TABS, n, fits));
-    let w = Math.floor((available - TAB_GAP * (visible - 1)) / visible);
-    if (w > 200) w = 200;
-    if (w < 1) w = 1;
+    const w = Math.min(200, Math.max(1, (available - TAB_GAP * (visible - 1)) / visible));
     el.style.setProperty("--tab-w", w + "px");
+    requestAnimationFrame(() => {
+      const first = tabs[0].getBoundingClientRect().width;
+      if (!(first > 0)) return;
+      const pitch = first + TAB_GAP;
+      const m = Math.min(fits, Math.max(1, Math.floor((available + TAB_GAP) / pitch)));
+      let cw = (available - TAB_GAP * (m - 1)) / m;
+      if (!overflowing) cw = Math.min(200, cw);
+      cw = Math.max(1, cw);
+      el.style.setProperty("--tab-w", cw + "px");
+    });
   };
 
   const updateScrollArrows = () => {
@@ -102,7 +112,7 @@ export function TitleBar() {
     const el = tabsScroller;
     if (!el) return;
     const first = el.querySelector<HTMLElement>(".tab");
-    const step = first ? first.offsetWidth + 2 : 240;
+    const step = (first ? first.getBoundingClientRect().width : 240) + TAB_GAP;
     el.scrollBy({ left: dir * step, behavior: "smooth" });
   };
 
