@@ -1,7 +1,8 @@
 import { Show } from "solid-js";
 import {
-  state, setState, deleteNoteFromList, closeOtherTabs, closeTabsToRight, newTab,
-  closeTab, openSettings
+  state, setState, deleteNoteFromList, closeOtherTabs, closeTabsToRight,
+  openSettings,
+  closeTab
 } from "../../store";
 import { trunc } from "../../util";
 import { svgGear, svgInfo, svgTrash } from "../../svg";
@@ -11,11 +12,6 @@ export function Overlays() {
   const ctxNote = () => state.ctx ? state.notes.find(n => n.id === state.ctx!.note_id) : null;
   const ctxTabIndex = () => state.ctx?.tab_index;
 
-  const newNote = () => {
-    setState("ctx", null);
-    newTab();
-  };
-
   const closeOtherTabsHandler = () => {
     setState("ctx", null);
     closeOtherTabs(ctxTabIndex()!);
@@ -24,6 +20,12 @@ export function Overlays() {
   const closeTabsToRightHandler = () => {
     setState("ctx", null);
     closeTabsToRight(ctxTabIndex()!);
+  }
+
+  const closeTabHandler = () => {
+    console.log("Closing tab from overlay", ctxTabIndex());
+    closeTab(ctxTabIndex()!);
+    setState("ctx", null);
   }
 
   return (
@@ -46,10 +48,11 @@ export function Overlays() {
           left: state.ctx!.x + "px",
           top: state.ctx!.y + "px"
         }}>
-          <div class="menu-item" onClick={newNote}>
-            Yeni not
+          {/* <div class="menu-sep"></div> */}
+
+          <div class="menu-item" onClick={closeTabHandler}>
+            Kapat
           </div>
-          <div class="menu-sep"></div>
           <div class={"menu-item" + (state.tabs.length <= 1 ? " disabled" : "")}
             onClick={closeOtherTabsHandler}>
             Diğerlerini kapat
