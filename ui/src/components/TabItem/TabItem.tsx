@@ -8,7 +8,7 @@ export function TabItem(props: {
         title: string;
         content: string;
         is_locked: boolean
-    }; index: number
+    }; index: number; onActivated?: () => void
 }) {
     const tab = props.tab;
     const i = props.index;
@@ -34,7 +34,10 @@ export function TabItem(props: {
             role="tab"
             tabIndex={0}
             aria-selected={(i === state.activeTab).toString() as "true" | "false"}
-            onClick={() => setState("activeTab", i)}
+            onClick={() => {
+                setState("activeTab", i);
+                props.onActivated?.();
+            }}
             onMouseDown={(e) => {
                 if ((e.target as HTMLElement).classList.contains("tab-close")) return;
                 setState("dragIndex", i);

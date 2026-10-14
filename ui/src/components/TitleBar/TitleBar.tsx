@@ -30,18 +30,16 @@ export function TitleBar() {
     const fits = Math.max(1, Math.floor((available + TAB_GAP) / (MIN_TAB_W + TAB_GAP)));
     const overflowing = n > fits;
     const visible = Math.max(1, Math.min(MAX_VISIBLE_TABS, n, fits));
-    const w = Math.min(200, Math.max(1, (available - TAB_GAP * (visible - 1)) / visible));
-    el.style.setProperty("--tab-w", w + "px");
-    requestAnimationFrame(() => {
-      const first = tabs[0].getBoundingClientRect().width;
-      if (!(first > 0)) return;
-      const pitch = first + TAB_GAP;
-      const m = Math.min(fits, Math.max(1, Math.floor((available + TAB_GAP) / pitch)));
-      let cw = (available - TAB_GAP * (m - 1)) / m;
-      if (!overflowing) cw = Math.min(200, cw);
-      cw = Math.max(1, cw);
-      el.style.setProperty("--tab-w", cw + "px");
-    });
+    const est = Math.min(200, Math.max(1, (available - TAB_GAP * (visible - 1)) / visible));
+    el.style.setProperty("--tab-w", est + "px");
+    const first = tabs[0].getBoundingClientRect().width;
+    if (!(first > 0)) return;
+    const pitch = first + TAB_GAP;
+    const m = Math.min(fits, Math.max(1, Math.floor((available + TAB_GAP) / pitch)));
+    let cw = (available - TAB_GAP * (m - 1)) / m;
+    if (!overflowing) cw = Math.min(200, cw);
+    cw = Math.max(1, cw);
+    el.style.setProperty("--tab-w", cw + "px");
   };
 
   const updateScrollArrows = () => {
@@ -78,12 +76,9 @@ export function TitleBar() {
   };
 
   const scrollActiveIntoView = () => {
-    const el = tabsScroller;
-    if (!el) return;
-    el.querySelector<HTMLElement>(".tab.active")?.scrollIntoView({
-      inline: "nearest",
-      block: "nearest",
-      behavior: "smooth",
+    requestAnimationFrame(() => {
+      tabsScroller?.querySelector<HTMLElement>(".tab.active")
+        ?.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
     });
   };
 
@@ -154,7 +149,7 @@ export function TitleBar() {
           <div class="tabs" id="tabs" ref={tabsScroller} onScroll={updateScrollArrows}
             classList={{ "ctx-open": !!state.ctx }}>
             {state.tabs.map((tab, i) =>
-              <TabItem tab={tab} index={i} />
+              <TabItem tab={tab} index={i} onActivated={scrollActiveIntoView} />
             )}
 
             {/* <TabItem tab={{
